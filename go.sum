@@ -129,3 +129,7 @@ gopkg.in/yaml.v2 v2.2.1 h1:mUhvW9EsL+naU5Q3cakzfE91YhliOondGd6ZrsDBHQE=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+roci.dev/replicant v0.0.0-20191103015250-6a96155ee206 h1:UgTfpiwoiA/S2VFlnYjFUuly1Hwd/BzZAV4glc4k7Yg=
+roci.dev/replicant v0.0.0-20191103015250-6a96155ee206/go.mod h1:SQf2mPj/MJXE9JWPRliojbFJTKdNZhpOBeT59fogyBI=
+roci.dev/replicant v0.0.12 h1:Zavdi0BnmJu/9p0Ze6FIVmnvjkNtxE6b5M+LXaKLmtg=
+roci.dev/replicant v0.0.12/go.mod h1:SQf2mPj/MJXE9JWPRliojbFJTKdNZhpOBeT59fogyBI=

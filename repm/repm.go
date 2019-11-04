@@ -15,9 +15,9 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 
-	"github.com/aboodman/replicant/api"
-	"github.com/aboodman/replicant/db"
-	rlog "github.com/aboodman/replicant/util/log"
+	"roci.dev/replicant/api"
+	"roci.dev/replicant/db"
+	rlog "roci.dev/replicant/util/log"
 )
 
 var (

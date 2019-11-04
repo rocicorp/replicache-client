@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aboodman/replicant/util/time"
+	"roci.dev/replicant/util/time"
 )
 
 func mm(assert *assert.Assertions, in interface{}) []byte {

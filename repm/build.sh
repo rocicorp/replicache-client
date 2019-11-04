@@ -15,9 +15,9 @@ cd $GOPATH/src
 # regardless of location.
 export GO111MODULE=off
 
-mkdir -p github.com/aboodman
-ln -s $ROOT github.com/aboodman/replicant > /dev/null 2>&1 
-cd github.com/aboodman/replicant/repm
+mkdir -p roci.dev
+ln -s $ROOT roci.dev/replicant > /dev/null 2>&1 
+cd roci.dev/replicant/repm
 rm -rf build
 mkdir build
 cd build
