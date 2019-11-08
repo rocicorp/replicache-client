@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -31,10 +32,18 @@ type connection struct {
 	dir string
 }
 
+// Logger allows client to optionally provide a place to send repm's log messages.
+type Logger interface {
+	io.Writer
+}
+
 // Init initializes Replicant. If the specified storage directory doesn't exist, it
-// is created.
-func Init(storageDir, tempDir string) {
-	rlog.Init(os.Stderr, rlog.Options{Prefix: true})
+// is created. Logger receives logging output from Replicant.
+func Init(storageDir, tempDir string, logger Logger) {
+	if logger == nil {
+		logger = os.Stderr
+	}
+	rlog.Init(logger, rlog.Options{Prefix: true})
 
 	if storageDir == "" {
 		log.Print("storageDir must be non-empty")
@@ -45,6 +54,12 @@ func Init(storageDir, tempDir string) {
 	}
 
 	repDir = storageDir
+}
+
+// for testing
+func deinit() {
+	connections = map[string]*connection{}
+	repDir = ""
 }
 
 // Dispatch send an API request to Replicant, JSON-serialized parameters, and returns the response.

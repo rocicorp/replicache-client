@@ -1,6 +1,7 @@
 package repm
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -19,13 +20,29 @@ func mm(assert *assert.Assertions, in interface{}) []byte {
 	return r
 }
 
-func TestBasic(t *testing.T) {
+func TestLog(t *testing.T) {
+	defer deinit()
 	defer time.SetFake()()
 	defer fakeUUID()()
 
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")
-	Init(dir, "")
+	assert.NoError(err)
+	buf := &bytes.Buffer{}
+	Init(dir, "", buf)
+	Dispatch("db1", "open", nil)
+
+	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+ repm\.go\:\d+\: Opening Replicant database 'db1' at '[^']+'`,
+		string(buf.Bytes()))
+}
+func TestBasic(t *testing.T) {
+	defer deinit()
+	defer time.SetFake()()
+	defer fakeUUID()()
+
+	assert := assert.New(t)
+	dir, err := ioutil.TempDir("", "")
+	Init(dir, "", nil)
 	res, err := Dispatch("db1", "open", nil)
 	assert.Nil(res)
 	assert.NoError(err)
@@ -63,6 +80,7 @@ func TestBasic(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
+	defer deinit()
 	assert := assert.New(t)
 
 	repDir = ""
@@ -71,7 +89,7 @@ func TestList(t *testing.T) {
 	assert.EqualError(err, "must call init first")
 	assert.Nil(rb)
 
-	Init("/not/existent/dir", "")
+	Init("/not/existent/dir", "", nil)
 	rb, err = Dispatch("", "list", nil)
 	assert.NoError(err)
 	assert.Equal(`{"databases":[]}`, string(rb))
@@ -79,7 +97,7 @@ func TestList(t *testing.T) {
 	dir, err := ioutil.TempDir("", "")
 	assert.NoError(err)
 
-	Init(dir, "")
+	Init(dir, "", nil)
 	rb, err = Dispatch("", "list", nil)
 	assert.NoError(err)
 	assert.Equal(`{"databases":[]}`, string(rb))
