@@ -18,6 +18,7 @@ import (
 	"roci.dev/replicant/api"
 	"roci.dev/replicant/db"
 	rlog "roci.dev/replicant/util/log"
+	"roci.dev/replicant/util/version"
 )
 
 var (
@@ -72,6 +73,8 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return nil, close(dbName)
 	case "drop":
 		return nil, drop(dbName)
+	case "version":
+		return []byte(version.Version()), nil
 	default:
 		conn := connections[dbName]
 		if conn == nil {

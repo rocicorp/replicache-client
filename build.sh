@@ -3,8 +3,9 @@ echo "Building repm..."
 
 set -x
 ORIG=`pwd`
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-ROOT=$DIR/../
+ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+REPL_VERSION=`git describe --tags`
+
 cd $ROOT
 rm -rf vendor
 go mod vendor > /dev/null 2>&1
@@ -16,15 +17,15 @@ cd $GOPATH/src
 export GO111MODULE=off
 
 mkdir -p roci.dev
-ln -s $ROOT roci.dev/replicant > /dev/null 2>&1 
-cd roci.dev/replicant/repm
+rm roci.dev/replicant-client
+ln -s $ROOT roci.dev/replicant-client > /dev/null 2>&1 
+cd roci.dev/replicant-client
 rm -rf build
 mkdir build
 cd build
-gomobile bind -ldflags="-s -w" --target=ios ../
-gomobile bind -ldflags="-s -w" --target=android ../
+gomobile bind -ldflags="-s -w -X github.com/aboodman/replicant/util/version.v=$REPL_VERSION" --target=ios ../repm/
+gomobile bind -ldflags="-s -w -X github.com/aboodman/replicant/util/version.v=$REPL_VERSION" --target=android ../repm/
 tar -czvf Repm.framework.tar.gz Repm.framework
 
 export GO111MODULE=
 cd $ORIG
-

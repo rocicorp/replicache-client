@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/replicant/util/time"
+	"roci.dev/replicant/util/version"
 )
 
 func mm(assert *assert.Assertions, in interface{}) []byte {
@@ -56,6 +57,9 @@ func TestBasic(t *testing.T) {
 	fi, err := os.Stat(testFile.Name())
 	assert.Equal(nil, fi)
 	assert.True(os.IsNotExist(err))
+
+	resp, err = Dispatch("", "version", nil)
+	assert.Equal(version.Version(), string(resp))
 }
 
 func TestList(t *testing.T) {
