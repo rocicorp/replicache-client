@@ -7,5 +7,5 @@ require (
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/stretchr/testify v1.3.0
-	roci.dev/replicant v0.2.1-0.20191120091122-01e4bb6ba91b
+	roci.dev/replicant v0.3.0
 )

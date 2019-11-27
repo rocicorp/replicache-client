@@ -40,6 +40,7 @@ type Logger interface {
 // Init initializes Replicant. If the specified storage directory doesn't exist, it
 // is created. Logger receives logging output from Replicant.
 func Init(storageDir, tempDir string, logger Logger) {
+	log.Printf("Hello from repm")
 	if logger == nil {
 		logger = os.Stderr
 	}
