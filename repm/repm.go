@@ -10,9 +10,13 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
+	"runtime"
 	"runtime/debug"
+	"time"
 
 	"github.com/attic-labs/noms/go/spec"
 
@@ -66,7 +70,11 @@ func deinit() {
 // Dispatch send an API request to Replicant, JSON-serialized parameters, and returns the response.
 // For the list of supported API requests and their parameters, see the api package.
 func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
+	t0 := time.Now()
 	defer func() {
+		t1 := time.Now()
+		ds := string(data)
+		log.Printf("Dispatch %v :: %v %v took %v - returned %v", dbName, rpc, ds, t1.Sub(t0), len(ret))
 		if r := recover(); r != nil {
 			var msg string
 			if e, ok := r.(error); ok {
@@ -91,6 +99,9 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return nil, drop(dbName)
 	case "version":
 		return []byte(version.Version()), nil
+	case "profile":
+		profile()
+		return nil, nil
 	default:
 		conn := connections[dbName]
 		if conn == nil {
@@ -216,4 +227,11 @@ func drop(dbName string) error {
 
 func dbPath(root, name string) string {
 	return path.Join(root, base64.RawURLEncoding.EncodeToString([]byte(name)))
+}
+
+func profile() {
+	runtime.SetBlockProfileRate(1)
+	go func() {
+		log.Println("Enabling http profiler:", http.ListenAndServe("localhost:6060", nil))
+	}()
 }
