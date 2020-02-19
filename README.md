@@ -2,6 +2,17 @@
 
 Replicant makes it easy - pleasant, even - to create insanely fast, local-first, offline-enabled mobile applications. All UI interactions are local by default, whether or not there is connectivity. The database is synchronized lazily with the server, and there is virtually no manual conflict resolution by either users or developers.
 
+## Compile and build
+
+```
+mkdir ~/somepath   # note: go modules require somepath not be in GOPATH
+cd ~/somepath
+git clone https://github.com/rocicorp/replicant-server replicant-server
+cd replicant-server
+go test ./...
+go build ./cmd/repl
+```
+
 TODO: Diagram
 
 ## How it Works
