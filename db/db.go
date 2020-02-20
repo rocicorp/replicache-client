@@ -146,65 +146,25 @@ func (db *DB) PutBundle(b []byte) error {
 	return nil
 }
 
+// Exec executes a transaction against the database atomically.
 func (db *DB) Exec(function string, args types.List) (types.Value, error) {
-	r, be, err := db.ExecBatch([]BatchItem{
-		BatchItem{
-			Function: function,
-			Args:     args,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if be != nil {
-		return nil, be.error
-	}
-	return r[0].Result, nil
-}
-
-type BatchItem struct {
-	Function string
-	Args     types.List
-}
-
-type BatchItemResponse struct {
-	Result types.Value
-}
-
-type BatchError struct {
-	error
-	Index int
-}
-
-// ExecBatch executes zero  or more transactions against the database atomically.
-// If a transaction fails, the returned error will be BatchError with the corresponding
-// index set correctly.
-func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, error) {
 	defer db.lock()()
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	oldHead := ds.HeadRef()
-	r := make([]BatchItemResponse, 0, len(batch))
 	basis := db.head
 	basisRef := basis.Ref()
-	for i, item := range batch {
-		if strings.HasPrefix(item.Function, ".") {
-			return nil, &BatchError{fmt.Errorf("Cannot call system function: %s", item.Function), i}, nil
-		}
-		newData, output, isWrite, err := db.execImpl(basisRef, item.Function, item.Args)
-		if err != nil {
-			return nil, &BatchError{err, i}, nil
-		}
 
-		r = append(r, BatchItemResponse{})
-		itemRes := &r[len(r)-1]
-		itemRes.Result = output
+	if strings.HasPrefix(function, ".") {
+		return nil, fmt.Errorf("Cannot call system function: %s", function)
+	}
+	newData, output, isWrite, err := db.execImpl(basisRef, function, args)
+	if err != nil {
+		return nil, err
+	}
 
-		// Do not add commits for read-only transactions.
-		if !isWrite {
-			continue
-		}
-
-		basis = makeTx(db.noms, basisRef, time.DateTime(), item.Function, item.Args, newData)
+	// Do not add commits for read-only transactions.
+	if isWrite {
+		basis = makeTx(db.noms, basisRef, time.DateTime(), function, args, newData)
 		basisRef = db.noms.WriteValue(basis.Original)
 	}
 
@@ -213,11 +173,11 @@ func (db *DB) ExecBatch(batch []BatchItem) ([]BatchItemResponse, *BatchError, er
 	newDS, err := db.noms.FastForward(ds, basisRef)
 	if err != nil {
 		db.noms.Flush()
-		log.Printf("Error committing execBatch - error: %s, old head: %s, attempted head: %s, current head: %s", err, oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
-		return r, nil, err
+		log.Printf("Error committing exec - error: %s, old head: %s, attempted head: %s, current head: %s", err, oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
+		return output, err
 	}
 	db.head = basis
-	return r, nil, nil
+	return output, nil
 }
 
 func (db *DB) Reload() error {
