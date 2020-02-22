@@ -107,7 +107,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	}
 
 	var patch = respBody.Patch
-	head := makeGenesis(db.noms, respBody.CommitID)
+	head := makeGenesis(db.noms, "TODO")
 	if len(patch) > 0 && patch[0].Op == jsonpatch.OpRemove && patch[0].Path == "/" {
 		patch = patch[1:]
 	} else {

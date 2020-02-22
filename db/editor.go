@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/attic-labs/noms/go/types"
 
-	"roci.dev/replicant-client/exec"
+	"roci.dev/replicache-client/exec"
 )
 
 type editor struct {

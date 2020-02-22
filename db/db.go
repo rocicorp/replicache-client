@@ -18,7 +18,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/diff-server/util/time"
-	"roci.dev/replicant-client/exec"
+	"roci.dev/replicache-client/exec"
 )
 
 const (

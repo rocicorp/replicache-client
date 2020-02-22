@@ -7,7 +7,7 @@ import (
 
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/replicant-client/exec"
+	"roci.dev/replicache-client/exec"
 )
 
 const (

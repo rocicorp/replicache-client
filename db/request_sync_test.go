@@ -12,7 +12,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-	servetypes "roci.dev/diffs/serve/types"
+	servetypes "roci.dev/diff-server/serve/types"
 )
 
 func TestRequestSync(t *testing.T) {

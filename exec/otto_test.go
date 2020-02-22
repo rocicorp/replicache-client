@@ -10,7 +10,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	jsnoms "roci.dev/replicant/util/noms/json"
+	jsnoms "roci.dev/diff-server/util/noms/json"
 )
 
 type db struct {

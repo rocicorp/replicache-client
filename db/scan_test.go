@@ -9,7 +9,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant-client/exec"
+	"roci.dev/replicache-client/exec"
 )
 
 func TestScan(t *testing.T) {
