@@ -8,6 +8,6 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20180617131154-15f95af6e78d
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200222020741-5d10c8968102
+	roci.dev/diff-server v0.0.0-20200222030311-471beffe7803
 	roci.dev/replicant v0.7.0
 )
