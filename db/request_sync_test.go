@@ -12,7 +12,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-	"roci.dev/replicant/api/shared"
+	servetypes "roci.dev/diffs/serve/types"
 )
 
 func TestRequestSync(t *testing.T) {
@@ -204,7 +204,7 @@ func TestRequestSync(t *testing.T) {
 		assert.NoError(err, t.label)
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var reqBody shared.HandleSyncRequest
+			var reqBody servetypes.HandleSyncRequest
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialBasis, reqBody.Basis, t.label)

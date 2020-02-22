@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"roci.dev/replicant/api/shared"
-	"roci.dev/replicant/util/chk"
-	"roci.dev/replicant/util/countingreader"
-	"roci.dev/replicant/util/noms/jsonpatch"
+	servetypes "roci.dev/diff-server/serve/types"
+	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/util/countingreader"
+	"roci.dev/diff-server/util/noms/jsonpatch"
 
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
@@ -30,7 +30,7 @@ type Progress func(bytesReceived, bytesExpected uint64)
 // RequestSync kicks off the new patch-based sync protocol from the client side.
 func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	url := fmt.Sprintf("%s/handleSync", remote.String())
-	reqBody, err := json.Marshal(shared.HandleSyncRequest{
+	reqBody, err := json.Marshal(servetypes.HandleSyncRequest{
 		Basis: db.head.Meta.Genesis.ServerCommitID,
 	})
 	verbose.Log("Syncing: %s from basis %s", url, db.head.Meta.Genesis.ServerCommitID)
@@ -79,7 +79,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		return 0, nil
 	}
 
-	var respBody shared.HandleSyncResponse
+	var respBody servetypes.HandleSyncResponse
 	var r io.Reader = resp.Body
 	if progress != nil {
 		cr := &countingreader.Reader{

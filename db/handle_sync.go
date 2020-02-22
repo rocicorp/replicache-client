@@ -7,8 +7,8 @@ import (
 	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
-	"roci.dev/replicant/util/noms/jsonpatch"
-	"roci.dev/replicant/util/time"
+	"roci.dev/diff-server/util/noms/jsonpatch"
+	"roci.dev/diff-server/util/time"
 )
 
 func (db *DB) HandleSync(from hash.Hash) ([]jsonpatch.Operation, error) {

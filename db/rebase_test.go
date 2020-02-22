@@ -9,8 +9,8 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/util/chk"
-	"roci.dev/replicant/util/noms/diff"
+	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/util/noms/diff"
 )
 
 func TestRebase(t *testing.T) {

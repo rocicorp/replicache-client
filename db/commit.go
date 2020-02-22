@@ -8,8 +8,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
-	"roci.dev/replicant/util/chk"
-	"roci.dev/replicant/util/noms/union"
+	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/util/noms/union"
 )
 
 var (

@@ -8,7 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/util/noms/diff"
+	"roci.dev/diff-server/util/noms/diff"
 )
 
 func TestValidate(t *testing.T) {
