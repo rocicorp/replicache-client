@@ -53,8 +53,6 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchPutBundle(req)
 	case "exec":
 		return api.dispatchExec(req)
-	case "execBatch":
-		return api.dispatchExecBatch(req)
 	case "requestSync":
 		return api.dispatchRequestSync(req)
 	case "syncProgress":
@@ -223,59 +221,6 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	if output != nil {
 		res.Result = jsnoms.New(api.db.Noms(), output)
 	}
-	return mustMarshal(res), nil
-}
-
-func (api *API) dispatchExecBatch(reqBytes []byte) ([]byte, error) {
-	var raw []json.RawMessage
-	err := json.Unmarshal(reqBytes, &raw)
-	if err != nil {
-		return nil, err
-	}
-
-	batch := make([]db.BatchItem, 0, len(raw))
-	for _, b := range raw {
-		bri := shared.BatchRequestItem{
-			Args: jsnoms.MakeList(api.db.Noms(), nil),
-		}
-		err = json.Unmarshal([]byte(b), &bri)
-		if err != nil {
-			return nil, err
-		}
-		batch = append(batch, db.BatchItem{
-			Function: bri.Name,
-			Args:     bri.Args.List(),
-		})
-	}
-
-	dbRes, batchError, err := api.db.ExecBatch(batch)
-
-	if err != nil {
-		return nil, err
-	}
-
-	res := shared.ExecBatchResponse{
-		Root: jsnoms.Hash{
-			Hash: api.db.Hash(),
-		},
-	}
-
-	if batchError != nil {
-		res.Error = &shared.BatchError{
-			Index:  batchError.Index,
-			Detail: batchError.Error(),
-		}
-	} else {
-		res.Batch = make([]shared.BatchResponseItem, 0, len(dbRes))
-		for _, item := range dbRes {
-			bri := shared.BatchResponseItem{}
-			if item.Result != nil {
-				bri.Result = jsnoms.New(api.db.Noms(), item.Result)
-			}
-			res.Batch = append(res.Batch, bri)
-		}
-	}
-
 	return mustMarshal(res), nil
 }
 

@@ -88,11 +88,6 @@ func TestBasics(t *testing.T) {
 		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},
 
-		// execBatch
-		{"execBatch", invalidRequest, ``, invalidRequestError},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": ".putBundle", "args": []}]`, `{"error":{"index":1,"detail":"Cannot call system function: .putBundle"},"root":"dsvkq4dji7v7kbj70b5tml1go53k516q"}`, ""},
-		{"execBatch", `[{"name": "add", "args": ["bar", 2]},{"name": "add", "args": ["bar", 2]},{"name": "log", "args": ["log", "bar"]}]`, `{"batch":[{"result":4},{"result":6},{}],"root":"qt3a4k7pktg8jhabj2bmfh262ls4gebm"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":6}`, ""},
 		// TODO: other scan operators
 	}
 

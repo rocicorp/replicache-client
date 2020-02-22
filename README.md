@@ -2,7 +2,35 @@
 
 Replicant makes it easy - pleasant, even - to create insanely fast, local-first, offline-enabled mobile applications. All UI interactions are local by default, whether or not there is connectivity. The database is synchronized lazily with the server, and there is virtually no manual conflict resolution by either users or developers.
 
-TODO: Diagram
+## Compile and build
+
+```
+mkdir ~/somepath   # note: go modules require somepath not be in GOPATH
+cd ~/somepath
+git clone https://github.com/rocicorp/replicant-server replicant-server
+cd replicant-server
+go test ./...
+go build ./cmd/repl
+```
+
+## Verify that it works
+
+```
+# server setup
+
+mkdir /tmp/server
+# put a value at id monkey; note that 'sandbox' is significant, it is a default unauthenticated account
+echo '["bananas", 42]' | ./repl --db=/tmp/server/sandbox/test-db put monkey 
+./repl --db=/tmp/server/sandbox/test-db scan # should show the monkey and its value
+./repl --db=/tmp/server serve
+
+# client setup 
+
+mkdir /tmp/client
+echo "" > /tmp/client/empty.js
+./repl --db=/tmp/client sync http://localhost:7001/sandbox/test-db  --bundle=/tmp/client/empty.js
+./repl --db=/tmp/client scan # should show monkey and its value, which was sync'd from the server
+```
 
 ## How it Works
 
