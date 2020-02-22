@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -280,40 +277,6 @@ func TestDrop(t *testing.T) {
 		noms := sp.GetDatabase()
 		ds := noms.GetDataset(db.LOCAL_DATASET)
 		assert.Equal(!t.deleted, ds.HasHead())
-	}
-}
-
-func TestServe(t *testing.T) {
-	assert := assert.New(t)
-	dir, err := ioutil.TempDir("", "")
-	assert.NoError(err)
-	fmt.Println(dir)
-
-	defer time.SetFake()()
-
-	args := append([]string{"--db=" + dir, "serve", "--port=8674"})
-	go impl(args, strings.NewReader(""), os.Stdout, os.Stderr, func(_ int) {})
-
-	const code = `function add(id, d) { var v = db.get(id) || 0; v += d; db.put(id, v); return v; }`
-	tc := []struct {
-		rpc              string
-		req              string
-		expectedResponse string
-		expectedError    string
-	}{
-		{"handleSync", `{"basis": "00000000000000000000000000000000"}`,
-			`{"patch":[{"op":"remove","path":"/"}],"commitID":"uosmsi0mbbd1qgf2m0rgfkcrhf32c7om","nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`, ""},
-	}
-
-	for i, t := range tc {
-		msg := fmt.Sprintf("test case %d: %s: %s", i, t.rpc, t.req)
-		resp, err := http.Post(fmt.Sprintf("http://localhost:8674/sandbox/foo/%s", t.rpc), "application/json", strings.NewReader(t.req))
-		assert.NoError(err, msg)
-		assert.Equal("application/json", resp.Header.Get("Content-type"))
-		body := bytes.Buffer{}
-		_, err = io.Copy(&body, resp.Body)
-		assert.NoError(err, msg)
-		assert.Equal(t.expectedResponse+"\n", string(body.Bytes()), msg)
 	}
 }
 

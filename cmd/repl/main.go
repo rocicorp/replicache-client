@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -26,8 +24,6 @@ import (
 
 	"roci.dev/replicant/db"
 	execpkg "roci.dev/replicant/exec"
-	servepkg "roci.dev/replicant/serve"
-	"roci.dev/replicant/serve/accounts"
 	"roci.dev/replicant/util/chk"
 	"roci.dev/replicant/util/kp"
 	rlog "roci.dev/replicant/util/log"
@@ -117,9 +113,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 		// Init logging
 		logOptions := rlog.Options{}
-		if pc.SelectedCommand.Model().Name == "serve" {
-			logOptions.Prefix = true
-		}
 		rlog.Init(errs, logOptions)
 
 		if *tf != nil {
@@ -153,7 +146,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	del(app, getDB, out)
 	exec(app, getDB, out)
 	sync(app, getDB)
-	serve(app, sps, errs)
 	drop(app, getSpec, in, out)
 	logCmd(app, getDB, out)
 
@@ -347,18 +339,6 @@ func sync(parent *kingpin.Application, gdb gdb) {
 
 		// TODO: progress
 		return db.RequestSync(*remoteSpec, nil)
-	})
-}
-
-func serve(parent *kingpin.Application, sps *string, errs io.Writer) {
-	kc := parent.Command("serve", "Starts a local Replicant server.")
-	port := kc.Flag("port", "The port to run on").Default("7001").Int()
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		ps := fmt.Sprintf(":%d", *port)
-		log.Printf("Listening on %s...", ps)
-		s := servepkg.NewService(*sps, accounts.Accounts())
-		http.Handle("/", s)
-		return http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
 	})
 }
 
