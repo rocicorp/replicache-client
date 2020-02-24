@@ -4,9 +4,9 @@
 package shared
 
 import (
-	"roci.dev/replicant/exec"
-	jsnoms "roci.dev/replicant/util/noms/json"
-	"roci.dev/replicant/util/noms/jsonpatch"
+	"roci.dev/replicache-client/exec"
+	jsnoms "roci.dev/diff-server/util/noms/json"
+	"roci.dev/diff-server/util/noms/jsonpatch"
 )
 
 type GetRootRequest struct {

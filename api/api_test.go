@@ -11,10 +11,10 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/api/shared"
-	"roci.dev/replicant/db"
-	jsnoms "roci.dev/replicant/util/noms/json"
-	"roci.dev/replicant/util/time"
+	jsnoms "roci.dev/diff-server/util/noms/json"
+	"roci.dev/diff-server/util/time"
+	"roci.dev/replicache-client/api/shared"
+	"roci.dev/replicache-client/db"
 )
 
 func TestBasics(t *testing.T) {
@@ -146,5 +146,5 @@ func TestProgress(t *testing.T) {
 	}
 
 	_, err = api.Dispatch("requestSync", mustMarshal(req))
-	assert.Regexp(`Response from [^ ]+ is not valid JSON: json: cannot unmarshal string into Go value of type shared.HandleSyncResponse`, err.Error())
+	assert.Regexp(`Response from [^ ]+ is not valid JSON: json: cannot unmarshal string into Go value of type types.HandleSyncResponse`, err.Error())
 }

@@ -11,11 +11,11 @@ import (
 
 	"github.com/attic-labs/noms/go/hash"
 
-	"roci.dev/replicant/api/shared"
-	"roci.dev/replicant/db"
-	"roci.dev/replicant/exec"
-	"roci.dev/replicant/util/chk"
-	jsnoms "roci.dev/replicant/util/noms/json"
+	"roci.dev/replicache-client/api/shared"
+	"roci.dev/replicache-client/db"
+	"roci.dev/replicache-client/exec"
+	"roci.dev/diff-server/util/chk"
+	jsnoms "roci.dev/diff-server/util/noms/json"
 )
 
 type API struct {
