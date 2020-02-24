@@ -4,9 +4,8 @@
 package shared
 
 import (
-	"roci.dev/replicache-client/exec"
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/diff-server/util/noms/jsonpatch"
+	"roci.dev/replicache-client/exec"
 )
 
 type GetRootRequest struct {
@@ -137,14 +136,4 @@ type SyncProgressRequest struct {
 type SyncProgressResponse struct {
 	BytesReceived uint64 `json:"bytesReceived"`
 	BytesExpected uint64 `json:"bytesExpected"`
-}
-
-type HandleSyncRequest struct {
-	Basis string `'json:"basis"`
-}
-
-type HandleSyncResponse struct {
-	Patch        []jsonpatch.Operation `json:"patch"`
-	CommitID     string                `json:"commitID"`
-	NomsChecksum string                `json:"nomsChecksum"`
 }

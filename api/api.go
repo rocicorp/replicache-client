@@ -6,16 +6,13 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync/atomic"
 
-	"github.com/attic-labs/noms/go/hash"
-
+	"roci.dev/diff-server/util/chk"
+	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/replicache-client/api/shared"
 	"roci.dev/replicache-client/db"
 	"roci.dev/replicache-client/exec"
-	"roci.dev/diff-server/util/chk"
-	jsnoms "roci.dev/diff-server/util/noms/json"
 )
 
 type API struct {
@@ -57,8 +54,6 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 		return api.dispatchRequestSync(req)
 	case "syncProgress":
 		return api.dispatchSyncProgress(req)
-	case "handleSync":
-		return api.dispatchHandleSync(req)
 	}
 	chk.Fail("Unsupported rpc name: %s", name)
 	return nil, nil
@@ -272,38 +267,6 @@ func (api *API) dispatchSyncProgress(reqBytes []byte) ([]byte, error) {
 	res := shared.SyncProgressResponse{
 		BytesReceived: api.sp.bytesReceived,
 		BytesExpected: api.sp.bytesExpected,
-	}
-	return mustMarshal(res), nil
-}
-
-func (api *API) dispatchHandleSync(reqBytes []byte) ([]byte, error) {
-	var req shared.HandleSyncRequest
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-	var h hash.Hash
-	if req.Basis != "" {
-		var ok bool
-		h, ok = hash.MaybeParse(req.Basis)
-		if !ok {
-			return nil, fmt.Errorf("Invalid basis hash")
-		}
-	}
-	r, err := api.db.HandleSync(h)
-	if err != nil {
-		return nil, err
-	}
-	res := shared.HandleSyncResponse{
-		CommitID: api.db.Head().Original.Hash().String(),
-		Patch:    r,
-		// TODO: This is a bummer. The checksum doesn't include the code.
-		// Can't just easily add the code in because the keys in our data here aren't
-		// namespaced in any way. What we really want to do is move the code into the
-		// main map and namespace all the data so that we can just use the Noms checksum.
-		// Alternately, we could move to lthash which wouldn't require us to materialize
-		// the map in order to update the checksum.
-		NomsChecksum: api.db.Head().Data(api.db.Noms()).Hash().String(),
 	}
 	return mustMarshal(res), nil
 }

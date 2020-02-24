@@ -75,13 +75,6 @@ func TestBasics(t *testing.T) {
 		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"01aj0nvumggim5hkm0atuf0s73p9l51e"}`, ""},
 		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
 
-		// handleSync
-		{"handleSync", `{"basis":""}`,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/bar","value":2},{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"01aj0nvumggim5hkm0atuf0s73p9l51e","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
-		{"handleSync", `{"basis":"bonk"}`, ``, "Invalid basis hash"},
-		{"handleSync", `{"basis":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`,
-			`{"patch":[{"op":"add","path":"/u/bar","value":2}],"commitID":"01aj0nvumggim5hkm0atuf0s73p9l51e","nomsChecksum":"2jbp7674jqsv0553qkq0hr68na0tvku1"}`, ""},
-
 		// scan
 		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"dsvkq4dji7v7kbj70b5tml1go53k516q"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
