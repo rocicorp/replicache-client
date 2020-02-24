@@ -1,6 +1,6 @@
 # Authorization
 
-The Replicant server can optionally limit access to authorized clients via signed [JWT](https://jwt.io)s.
+The Replicache server can optionally limit access to authorized clients via signed [JWT](https://jwt.io)s.
 
 ## Creating a Key Pair
 
@@ -15,9 +15,9 @@ Send `key.pub` to me (aa@roci.dev) and keep `key.pem` private.
 
 ## Token Structure
 
-Replicant currently supports two JWT fields:
+Replicache currently supports two JWT fields:
 
-* `db`: The Replicant database name the token grants access to
+* `db`: The Replicache database name the token grants access to
 * `exp`: The standard JWT expires field, which is seconds since the unix epoch
 
 ## Signing Your Token
@@ -25,7 +25,7 @@ Replicant currently supports two JWT fields:
 Your server will need to create tokens and send them to clients periodically. The method to sign varies by
 language/environment. See [jwt.io](https://jwt.io/) to find a compatible implementation.
 
-Replicant JWTs are signed with ES256.
+Replicache JWTs are signed with ES256.
 
 ## Test Token
 
@@ -35,12 +35,12 @@ If you are having trouble generating correctly signed tokens, you can create a t
 echo "{\"db\":\"mydb\", \"exp\":2000000000}" | jwt -key /path/to/your/private-key.pem -alg ES256 -sign -
 ```
 
-## Sending Token to Replicant
+## Sending Token to Replicache
 
-Pass the signed JWT to the `Replicant` constructor in your SDK. You can also update it from time to time via the public accessor:
+Pass the signed JWT to the `Replicache` constructor in your SDK. You can also update it from time to time via the public accessor:
 
 ```dart
-var rep = Replicant("https://serve.replicate.to/4/mydb", authToken);
+var rep = Replicache("https://serve.replicate.to/4/mydb", authToken);
 
 ... time passes, client refreshes auth token from server ...
 

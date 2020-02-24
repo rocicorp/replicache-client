@@ -29,7 +29,7 @@ var uuid = func() string {
 	return shortuuid.New()
 }
 
-// ClientConfig is client-specific configuration stored for Replicant clients. It's not synced to servers
+// ClientConfig is client-specific configuration stored for Replicache clients. It's not synced to servers
 // or other nodes.
 type ClientConfig struct {
 	ClientID string

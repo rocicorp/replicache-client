@@ -1,6 +1,6 @@
-# Replicant Client
+# Replicache Client
 
-This is a shared native library used by all Replicant clients. Currently it is implemented by via of [GoMobile](https://godoc.org/golang.org/x/mobile/cmd/gomobile),
+This is a shared native library used by all Replicache clients. Currently it is implemented by via of [GoMobile](https://godoc.org/golang.org/x/mobile/cmd/gomobile),
 which means it is usable only by iOS an Android.
 
 However, it should eventually also have a cgo target, so that it can be used by desktop clients too.

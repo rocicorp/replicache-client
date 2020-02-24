@@ -15,7 +15,7 @@ import (
 // after this forkpoint on the `commit` side are replayed one by one on top of onto,
 // and the resulting new head is returned.
 //
-// In Replicant, unlike e.g., Git, this is done such that the original forked
+// In Replicache, unlike e.g., Git, this is done such that the original forked
 // history is still preserved in the database (e.g. for later debugging). But the
 // effect on the data and from user's point of view is the same as `git rebase`.
 func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkPoint types.Ref) (rebased Commit, err error) {

@@ -1,5 +1,5 @@
-// Package db implements the core database abstraction of Replicant. It provides facilities to import
-// transaction bundles, execute transactions, and synchronize Replicant databases.
+// Package db implements the core database abstraction of Replicache. It provides facilities to import
+// transaction bundles, execute transactions, and synchronize Replicache databases.
 package db
 
 import (
@@ -77,7 +77,7 @@ func (db *DB) init() error {
 
 	headType := types.TypeOf(ds.Head())
 	if !types.IsSubtype(schema, headType) {
-		return fmt.Errorf("Cannot load database. Specified head has non-Replicant data of type: %s", headType.Describe())
+		return fmt.Errorf("Cannot load database. Specified head has non-Replicache data of type: %s", headType.Describe())
 	}
 
 	var head Commit

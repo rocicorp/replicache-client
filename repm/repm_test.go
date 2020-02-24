@@ -32,7 +32,7 @@ func TestLog(t *testing.T) {
 	Init(dir, "", buf)
 	Dispatch("db1", "open", nil)
 
-	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+ repm\.go\:\d+\: Opening Replicant database 'db1' at '[^']+'`,
+	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+ repm\.go\:\d+\: Opening Replicache database 'db1' at '[^']+'`,
 		string(buf.Bytes()))
 }
 func TestBasic(t *testing.T) {
