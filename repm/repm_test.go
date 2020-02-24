@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/util/time"
-	"roci.dev/replicant/util/version"
+	"roci.dev/diff-server/util/time"
+	"roci.dev/diff-server/util/version"
 )
 
 func mm(assert *assert.Assertions, in interface{}) []byte {
@@ -47,12 +47,12 @@ func TestBasic(t *testing.T) {
 	assert.Nil(res)
 	assert.NoError(err)
 	resp, err := Dispatch("db1", "put", []byte(`{"id": "foo", "value": "bar"}`))
-	assert.Equal(`{"root":"3aktuu35stgss7djb5famn6u7iul32nv"}`, string(resp))
+	assert.Equal(`{"root":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`, string(resp))
 	assert.NoError(err)
 	resp, err = Dispatch("db1", "get", []byte(`{"id": "foo"}`))
 	assert.Equal(`{"has":true,"value":"bar"}`, string(resp))
 	resp, err = Dispatch("db1", "del", []byte(`{"id": "foo"}`))
-	assert.Equal(`{"ok":true,"root":"d3dqs6rctj3bmqg43pctpe9jol01h5kl"}`, string(resp))
+	assert.Equal(`{"ok":true,"root":"idmjmtlkeoj7rr92frt546norfvt0b1i"}`, string(resp))
 	testFile, err := ioutil.TempFile(connections["db1"].dir, "")
 	assert.NoError(err)
 

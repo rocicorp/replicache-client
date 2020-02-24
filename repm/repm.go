@@ -20,10 +20,10 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 
-	"roci.dev/replicant/api"
-	"roci.dev/replicant/db"
-	rlog "roci.dev/replicant/util/log"
-	"roci.dev/replicant/util/version"
+	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/version"
+	"roci.dev/replicache-client/api"
+	"roci.dev/replicache-client/db"
 )
 
 var (
@@ -177,8 +177,7 @@ func open(dbName string) error {
 	if err != nil {
 		return err
 	}
-	origin, err := initClientID(sp.GetDatabase())
-	db, err := db.Load(sp, origin)
+	db, err := db.Load(sp)
 	if err != nil {
 		return err
 	}
