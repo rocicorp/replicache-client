@@ -45,14 +45,14 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
-	app := kingpin.New("replicant", "Conflict-Free Replicated Database")
+	app := kingpin.New("repl", "Command-Line Replicache Client")
 	app.ErrorWriter(errs)
 	app.UsageWriter(errs)
 	app.Terminate(exit)
 
-	v := app.Flag("version", "Prints the version of Replicant - same as the 'version' command.").Short('v').Bool()
+	v := app.Flag("version", "Prints the version of this client - same as the 'version' command.").Short('v').Bool()
 	auth := app.Flag("auth", "The authorization token to pass to db when connecting.").String()
-	sps := app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicate.to/<mydb>).").PlaceHolder("/path/to/db").Required().String()
+	sps := app.Flag("db", "The database to connect to. Both local and remote databases are supported. For local databases, specify a directory path to store the database in. For remote databases, specify the http(s) URL to the database (usually https://serve.replicache.dev/<mydb>).").PlaceHolder("/path/to/db").Required().String()
 	tf := app.Flag("trace", "Name of a file to write a trace to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 	cpu := app.Flag("cpu", "Name of file to write CPU profile to").OpenFile(os.O_RDWR|os.O_CREATE, 0644)
 
@@ -165,9 +165,9 @@ type gdb func() (db.DB, error)
 type gsp func() (spec.Spec, error)
 
 func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("exec", "Execute a function from the bundle in stdin.")
+	kc := parent.Command("exec", "Execute a bundle function.")
 
-	bundle := kc.Flag("bundle", "Filename of bundle to execute").Required().File()
+	bundle := kc.Flag("bundle", "Filename of bundle to execute").PlaceHolder("BUNDLEFILE").Required().File()
 	name := kc.Arg("name", "Name of function from bundle to execute.").Required().String()
 	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
 
@@ -322,8 +322,8 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 }
 
 func sync(parent *kingpin.Application, gdb gdb) {
-	kc := parent.Command("sync", "Sync with a replicant server.")
-	bundle := kc.Flag("bundle", "Source of bundle functions").Required().File()
+	kc := parent.Command("sync", "Sync with a this client server.")
+	bundle := kc.Flag("bundle", "Source of bundle functions").PlaceHolder("BUNDLEFILE").File()
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -333,8 +333,10 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		}
 
 		buf := &bytes.Buffer{}
-		_, err = io.Copy(buf, *bundle)
-		chk.NoError(err)
+		if *bundle != nil {
+			_, err = io.Copy(buf, *bundle)
+			chk.NoError(err)
+		}
 		err = db.PutBundle(buf.Bytes())
 
 		// TODO: progress
@@ -343,7 +345,7 @@ func sync(parent *kingpin.Application, gdb gdb) {
 }
 
 func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
-	kc := parent.Command("drop", "Deletes a replicant database and its history.")
+	kc := parent.Command("drop", "Deletes a this client database and its history.")
 
 	r := bufio.NewReader(in)
 	w := bufio.NewWriter(out)
@@ -369,7 +371,7 @@ func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 }
 
 func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("log", "Displays the history of a replicant database.")
+	kc := parent.Command("log", "Displays the history of a this client database.")
 	np := kc.Flag("no-pager", "supress paging functionality").Bool()
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
