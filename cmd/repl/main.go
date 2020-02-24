@@ -22,13 +22,13 @@ import (
 	"github.com/mgutz/ansi"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"roci.dev/replicant/db"
-	execpkg "roci.dev/replicant/exec"
-	"roci.dev/replicant/util/chk"
-	"roci.dev/replicant/util/kp"
-	rlog "roci.dev/replicant/util/log"
-	"roci.dev/replicant/util/tbl"
-	"roci.dev/replicant/util/version"
+	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/util/kp"
+	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/tbl"
+	"roci.dev/diff-server/util/version"
+	"roci.dev/replicache-client/db"
+	execpkg "roci.dev/replicache-client/exec"
 )
 
 const (

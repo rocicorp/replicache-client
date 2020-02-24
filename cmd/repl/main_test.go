@@ -12,8 +12,8 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/replicant/db"
-	"roci.dev/replicant/util/time"
+	"roci.dev/diff-server/util/time"
+	"roci.dev/replicache-client/db"
 )
 
 func TestCommands(t *testing.T) {
