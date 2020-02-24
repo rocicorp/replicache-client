@@ -10,7 +10,7 @@ However, it should eventually also have a cgo target, so that it can be used by 
 This library is not meant to be used directly and does not commit to a stable interface. Breaking changes
 are introduced regularly whenever convenient.
 
-Clients should use something higher level like `replicant-sdk-flutter`, which does provide a stable API.
+Clients should use something higher level like `replicache-sdk-flutter`, which does provide a stable API.
 Higher-level language/platform-specific bindings packages will statically link to a specific version of
 this library and handle API changes when they update.
 

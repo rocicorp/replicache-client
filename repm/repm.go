@@ -1,4 +1,4 @@
-// Package repm implements an Android and iOS interface to Replicant via [Gomobile](https://github.com/golang/go/wiki/Mobile).
+// Package repm implements an Android and iOS interface to Replicache via [Gomobile](https://github.com/golang/go/wiki/Mobile).
 // repm is not thread-safe. Callers must guarantee that it is not called concurrently on different threads/goroutines.
 package repm
 
@@ -41,8 +41,8 @@ type Logger interface {
 	io.Writer
 }
 
-// Init initializes Replicant. If the specified storage directory doesn't exist, it
-// is created. Logger receives logging output from Replicant.
+// Init initializes Replicache. If the specified storage directory doesn't exist, it
+// is created. Logger receives logging output from Replicache.
 func Init(storageDir, tempDir string, logger Logger) {
 	log.Printf("Hello from repm")
 	if logger == nil {
@@ -67,7 +67,7 @@ func deinit() {
 	repDir = ""
 }
 
-// Dispatch send an API request to Replicant, JSON-serialized parameters, and returns the response.
+// Dispatch send an API request to Replicache, JSON-serialized parameters, and returns the response.
 // For the list of supported API requests and their parameters, see the api package.
 func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	t0 := time.Now()
@@ -82,9 +82,9 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 			} else {
 				msg = fmt.Sprintf("%v", r)
 			}
-			log.Printf("Replicant panicked with: %s\n%s\n", msg, string(debug.Stack()))
+			log.Printf("Replicache panicked with: %s\n%s\n", msg, string(debug.Stack()))
 			ret = nil
-			err = fmt.Errorf("Replicant panicked with: %s - see stderr for more", msg)
+			err = fmt.Errorf("Replicache panicked with: %s - see stderr for more", msg)
 		}
 	}()
 
@@ -157,10 +157,10 @@ func list() (resBytes []byte, err error) {
 	return json.Marshal(resp)
 }
 
-// Open a replicant database. If the named database doesn't exist it is created.
+// Open a Replicache database. If the named database doesn't exist it is created.
 func open(dbName string) error {
 	if repDir == "" {
-		return errors.New("Replicant is uninitialized - must call init first")
+		return errors.New("Replicache is uninitialized - must call init first")
 	}
 	if dbName == "" {
 		return errors.New("dbName must be non-empty")
@@ -171,7 +171,7 @@ func open(dbName string) error {
 	}
 
 	p := dbPath(repDir, dbName)
-	log.Printf("Opening Replicant database '%s' at '%s'", dbName, p)
+	log.Printf("Opening Replicache database '%s' at '%s'", dbName, p)
 	log.Println("Using tempdir: ", os.TempDir())
 	sp, err := spec.ForDatabase(p)
 	if err != nil {
@@ -200,13 +200,13 @@ func close(dbName string) error {
 }
 
 type dropRequest struct {
-	ReplicantRootDir string `json:"replicantRootDir"`
+	rootDir string `json:"rootDir"`
 }
 
 // Drop closes and deletes the specified local database. Remote replicas in the group are not affected.
 func drop(dbName string) error {
 	if repDir == "" {
-		return errors.New("Replicant is uninitialized - must call init first")
+		return errors.New("Replicache is uninitialized - must call init first")
 	}
 	if dbName == "" {
 		return errors.New("dbName must be non-empty")
