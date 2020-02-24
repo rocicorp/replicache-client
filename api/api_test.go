@@ -13,7 +13,6 @@ import (
 
 	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
-	"roci.dev/replicache-client/api/shared"
 	"roci.dev/replicache-client/db"
 )
 
@@ -104,9 +103,9 @@ func TestProgress(t *testing.T) {
 	api := New(db)
 
 	getProgress := func() (received, expected uint64) {
-		buf, err := api.Dispatch("syncProgress", mustMarshal(shared.SyncProgressRequest{}))
+		buf, err := api.Dispatch("syncProgress", mustMarshal(SyncProgressRequest{}))
 		assert.NoError(err)
-		var resp shared.SyncProgressResponse
+		var resp SyncProgressResponse
 		err = json.Unmarshal(buf, &resp)
 		assert.NoError(err)
 		return resp.BytesReceived, resp.BytesExpected
@@ -133,7 +132,7 @@ func TestProgress(t *testing.T) {
 
 	sp, err := spec.ForDatabase(server.URL)
 	assert.NoError(err)
-	req := shared.SyncRequest{
+	req := SyncRequest{
 		Remote:  jsnoms.Spec{sp},
 		Shallow: true,
 	}

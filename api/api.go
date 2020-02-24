@@ -10,7 +10,6 @@ import (
 
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/replicache-client/api/shared"
 	"roci.dev/replicache-client/db"
 	"roci.dev/replicache-client/exec"
 )
@@ -60,13 +59,13 @@ func (api *API) Dispatch(name string, req []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
-	var req shared.GetRootRequest
+	var req GetRootRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
 
-	res := shared.GetRootResponse{
+	res := GetRootResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -75,7 +74,7 @@ func (api *API) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
-	var req shared.HasRequest
+	var req HasRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -84,14 +83,14 @@ func (api *API) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := shared.HasResponse{
+	res := HasResponse{
 		Has: ok,
 	}
 	return mustMarshal(res), nil
 }
 
 func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
-	var req shared.GetRequest
+	var req GetRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -100,7 +99,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := shared.GetResponse{}
+	res := GetResponse{}
 	if v == nil {
 		res.Has = false
 	} else {
@@ -111,7 +110,7 @@ func (api *API) dispatchGet(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
-	var req shared.ScanRequest
+	var req ScanRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -124,7 +123,7 @@ func (api *API) dispatchScan(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
-	req := shared.PutRequest{
+	req := PutRequest{
 		Value: jsnoms.Make(api.db.Noms(), nil),
 	}
 	err := json.Unmarshal(reqBytes, &req)
@@ -138,7 +137,7 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := shared.PutResponse{
+	res := PutResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -147,7 +146,7 @@ func (api *API) dispatchPut(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
-	req := shared.DelRequest{}
+	req := DelRequest{}
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -156,7 +155,7 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := shared.DelResponse{
+	res := DelResponse{
 		Ok: ok,
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
@@ -166,18 +165,18 @@ func (api *API) dispatchDel(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchGetBundle(reqBytes []byte) ([]byte, error) {
-	var req shared.GetBundleRequest
+	var req GetBundleRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	return mustMarshal(shared.GetBundleResponse{
+	return mustMarshal(GetBundleResponse{
 		Code: string(api.db.Bundle()),
 	}), nil
 }
 
 func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
-	var req shared.PutBundleRequest
+	var req PutBundleRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -186,7 +185,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
-	res := shared.PutBundleResponse{
+	res := PutBundleResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -195,7 +194,7 @@ func (api *API) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
-	req := shared.ExecRequest{
+	req := ExecRequest{
 		Args: jsnoms.List{
 			Value: jsnoms.Make(api.db.Noms(), nil),
 		},
@@ -208,7 +207,7 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := shared.ExecResponse{
+	res := ExecResponse{
 		Root: jsnoms.Hash{
 			Hash: api.db.Hash(),
 		},
@@ -220,7 +219,7 @@ func (api *API) dispatchExec(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
-	var req shared.SyncRequest
+	var req SyncRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -234,7 +233,7 @@ func (api *API) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 
 	req.Remote.Options.Authorization = req.Auth
 
-	res := shared.SyncResponse{}
+	res := SyncResponse{}
 	err = api.db.RequestSync(req.Remote.Spec, func(received, expected uint64) {
 		api.sp = syncProgress{
 			bytesReceived: received,
@@ -242,7 +241,7 @@ func (api *API) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 		}
 	})
 	if _, ok := err.(db.SyncAuthError); ok {
-		res.Error = &shared.SyncResponseError{
+		res.Error = &SyncResponseError{
 			BadAuth: err.Error(),
 		}
 		err = nil
@@ -259,12 +258,12 @@ func (api *API) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 }
 
 func (api *API) dispatchSyncProgress(reqBytes []byte) ([]byte, error) {
-	var req shared.SyncProgressRequest
+	var req SyncProgressRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	res := shared.SyncProgressResponse{
+	res := SyncProgressResponse{
 		BytesReceived: api.sp.bytesReceived,
 		BytesExpected: api.sp.bytesExpected,
 	}
