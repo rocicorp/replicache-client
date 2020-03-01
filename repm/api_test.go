@@ -1,8 +1,9 @@
-package api
+package repm
 
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,16 +14,19 @@ import (
 
 	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
-	"roci.dev/replicache-client/db"
 )
 
 func TestBasics(t *testing.T) {
-	assert := assert.New(t)
-	local, dir := db.LoadTempDB(assert)
-	fmt.Println(dir)
-	api := New(local)
-
+	defer deinit()
 	defer time.SetFake()()
+	defer fakeUUID()()
+
+	assert := assert.New(t)
+	dir, err := ioutil.TempDir("", "")
+	Init(dir, "", nil)
+	ret, err := Dispatch("db1", "open", nil)
+	assert.Nil(ret)
+	assert.NoError(err)
 
 	const invalidRequest = ""
 	const invalidRequestError = "unexpected end of JSON input"
@@ -84,7 +88,7 @@ func TestBasics(t *testing.T) {
 	}
 
 	for _, t := range tc {
-		res, err := api.Dispatch(t.rpc, []byte(t.req))
+		res, err := Dispatch("db1", t.rpc, []byte(t.req))
 		if t.expectedError != "" {
 			assert.Nil(res, "test case %s: %s", t.rpc, t.req, "test case %s: %s", t.rpc, t.req)
 			assert.EqualError(err, t.expectedError, "test case %s: %s", t.rpc, t.req)
@@ -96,14 +100,18 @@ func TestBasics(t *testing.T) {
 }
 
 func TestProgress(t *testing.T) {
-	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
 	assert := assert.New(t)
-	db, dir := db.LoadTempDB(assert)
+	dir, err := ioutil.TempDir("", "")
 	fmt.Println("dir", dir)
-	api := New(db)
+	Init(dir, "", nil)
+	ret, err := Dispatch("db1", "open", nil)
+	assert.Nil(ret)
+	assert.NoError(err)
+
+	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
 
 	getProgress := func() (received, expected uint64) {
-		buf, err := api.Dispatch("syncProgress", mustMarshal(SyncProgressRequest{}))
+		buf, err := Dispatch("db1", "syncProgress", mustMarshal(SyncProgressRequest{}))
 		assert.NoError(err)
 		var resp SyncProgressResponse
 		err = json.Unmarshal(buf, &resp)
@@ -137,6 +145,6 @@ func TestProgress(t *testing.T) {
 		Shallow: true,
 	}
 
-	_, err = api.Dispatch("requestSync", mustMarshal(req))
+	_, err = Dispatch("db1", "requestSync", mustMarshal(req))
 	assert.Regexp(`Response from [^ ]+ is not valid JSON: json: cannot unmarshal string into Go value of type types.HandleSyncResponse`, err.Error())
 }

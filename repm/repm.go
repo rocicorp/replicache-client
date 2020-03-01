@@ -20,9 +20,9 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 
+	"roci.dev/diff-server/util/chk"
 	rlog "roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/version"
-	"roci.dev/replicache-client/api"
 	"roci.dev/replicache-client/db"
 )
 
@@ -30,11 +30,6 @@ var (
 	connections = map[string]*connection{}
 	repDir      string
 )
-
-type connection struct {
-	api *api.API
-	dir string
-}
 
 // Logger allows client to optionally provide a place to send repm's log messages.
 type Logger interface {
@@ -68,7 +63,6 @@ func deinit() {
 }
 
 // Dispatch send an API request to Replicache, JSON-serialized parameters, and returns the response.
-// For the list of supported API requests and their parameters, see the api package.
 func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	t0 := time.Now()
 	defer func() {
@@ -102,13 +96,38 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	case "profile":
 		profile()
 		return nil, nil
-	default:
-		conn := connections[dbName]
-		if conn == nil {
-			return nil, errors.New("specified database is not open")
-		}
-		return conn.api.Dispatch(rpc, data)
 	}
+
+	conn := connections[dbName]
+	if conn == nil {
+		return nil, errors.New("specified database is not open")
+	}
+	switch rpc {
+	case "getRoot":
+		return conn.dispatchGetRoot(data)
+	case "has":
+		return conn.dispatchHas(data)
+	case "get":
+		return conn.dispatchGet(data)
+	case "scan":
+		return conn.dispatchScan(data)
+	case "put":
+		return conn.dispatchPut(data)
+	case "del":
+		return conn.dispatchDel(data)
+	case "getBundle":
+		return conn.dispatchGetBundle(data)
+	case "putBundle":
+		return conn.dispatchPutBundle(data)
+	case "exec":
+		return conn.dispatchExec(data)
+	case "requestSync":
+		return conn.dispatchRequestSync(data)
+	case "syncProgress":
+		return conn.dispatchSyncProgress(data)
+	}
+	chk.Fail("Unsupported rpc name: %s", rpc)
+	return nil, nil
 }
 
 type DatabaseInfo struct {
@@ -182,7 +201,7 @@ func open(dbName string) error {
 		return err
 	}
 
-	connections[dbName] = &connection{api: api.New(db), dir: p}
+	connections[dbName] = &connection{db: db, dir: p}
 	return nil
 }
 

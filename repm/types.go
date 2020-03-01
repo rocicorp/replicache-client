@@ -1,7 +1,7 @@
 // Package api implements the high-level API that is exposed to clients.
 // Since we have many clients in many different languages, this is implemented
 // language/host-indepedently, and further adapted by different packages.
-package api
+package repm
 
 import (
 	jsnoms "roci.dev/diff-server/util/noms/json"

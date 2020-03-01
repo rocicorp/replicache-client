@@ -32,8 +32,7 @@ func TestLog(t *testing.T) {
 	Init(dir, "", buf)
 	Dispatch("db1", "open", nil)
 
-	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+ repm\.go\:\d+\: Opening Replicache database 'db1' at '[^']+'`,
-		string(buf.Bytes()))
+	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+`, string(buf.Bytes()))
 }
 func TestBasic(t *testing.T) {
 	defer deinit()
@@ -43,6 +42,7 @@ func TestBasic(t *testing.T) {
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")
 	Init(dir, "", nil)
+
 	res, err := Dispatch("db1", "open", nil)
 	assert.Nil(res)
 	assert.NoError(err)
