@@ -4,8 +4,9 @@
 package repm
 
 import (
+	"roci.dev/replicache-client/db"
+
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/replicache-client/exec"
 )
 
 type GetRootRequest struct {
@@ -32,7 +33,7 @@ type GetResponse struct {
 	Value *jsnoms.Value `json:"value,omitempty"`
 }
 
-type ScanRequest exec.ScanOptions
+type ScanRequest db.ScanOptions
 
 type ScanItem struct {
 	ID    string       `json:"id"`
@@ -75,41 +76,6 @@ type PutBundleRequest struct {
 
 type PutBundleResponse struct {
 	Root jsnoms.Hash `json:"root"`
-}
-
-type ExecRequest struct {
-	Name string      `json:name"`
-	Args jsnoms.List `json:"args"`
-}
-
-type ExecResponse struct {
-	Result *jsnoms.Value `json:"result,omitempty"`
-	Root   jsnoms.Hash   `json:"root"`
-}
-
-type BatchRequestItem ExecRequest
-
-// ExecBatchRequest contains a batch of transactions to execute with the `execBatch` command.
-// This is much faster than executing them one-by-one via `exec`.
-//
-// If any transaction function returns an error, the entire batch is halted. Results from all
-// previous transactions in the batch are returned however, nothing from the batch is committed.
-type ExecBatchRequest []BatchRequestItem
-
-type BatchResponseItem struct {
-	Result *jsnoms.Value `json:"result,omitempty"`
-}
-
-type BatchError struct {
-	Index  int    `json:"index"`
-	Detail string `json:"detail"`
-}
-
-// ExecBatchResponse is the response for ExecBatchRequest. One of Batch or Error will be present.
-type ExecBatchResponse struct {
-	Batch []BatchResponseItem `json:"batch,omitempty"`
-	Error *BatchError         `json:"error,omitempty"`
-	Root  jsnoms.Hash         `json:"root"`
 }
 
 type SyncRequest struct {

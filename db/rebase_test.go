@@ -2,14 +2,12 @@ package db
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
-	"roci.dev/diff-server/util/chk"
 	"roci.dev/diff-server/util/noms/diff"
 )
 
@@ -36,7 +34,7 @@ func TestRebase(t *testing.T) {
 		if ds == "" {
 			return types.NewMap(noms)
 		}
-		return types.NewMap(noms, types.String("foo"), list(strings.Split(ds, ",")...))
+		return types.NewMap(noms, types.String("foo"), types.String(ds))
 	}
 
 	assertEqual := func(c1, c2 Commit) {
@@ -49,9 +47,6 @@ func TestRebase(t *testing.T) {
 
 	g := db.head
 	epoch := datetime.DateTime{}
-	bundle := []byte("function log(k, v) { var val = db.get(k) || []; val.push(v); db.put(k, val); }")
-	err := db.PutBundle(bundle)
-	chk.NoError(err)
 
 	tx := func(basis Commit, arg string, ds string) Commit {
 		d := data(ds)
@@ -59,7 +54,7 @@ func TestRebase(t *testing.T) {
 			noms,
 			basis.Ref(),
 			epoch,
-			"log",            // function
+			".putValue",      // function
 			list("foo", arg), // args
 			write(d))         // result data
 		write(r.Original)
@@ -131,7 +126,7 @@ func TestRebase(t *testing.T) {
 	(func() {
 		a := tx(g, "a", "a")
 		b := tx(g, "b", "b")
-		expected := ro(a, b, "a,b")
+		expected := ro(a, b, "b")
 		test(a, b, expected, "")
 	})()
 
@@ -144,9 +139,9 @@ func TestRebase(t *testing.T) {
 	(func() {
 		a := tx(g, "a", "a")
 		b := tx(g, "b", "b")
-		c := tx(b, "c", "b,c")
-		rob := ro(a, b, "a,b")
-		roc := ro(rob, c, "a,b,c")
+		c := tx(b, "c", "c")
+		rob := ro(a, b, "b")
+		roc := ro(rob, c, "c")
 		test(a, c, roc, "")
 	})()
 
@@ -159,10 +154,10 @@ func TestRebase(t *testing.T) {
 	//          \  c  /
 	(func() {
 		a := tx(g, "a", "a")
-		b := tx(a, "b", "a,b")
+		b := tx(a, "b", "b")
 		c := tx(g, "c", "c")
-		roc := ro(a, c, "a,c")
-		expected := ro(b, roc, "a,b,c")
+		roc := ro(a, c, "c")
+		expected := ro(b, roc, "c")
 		test(b, roc, expected, "")
 	})()
 }

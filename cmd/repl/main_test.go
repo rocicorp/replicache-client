@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path"
 	"strings"
 	"testing"
 
@@ -24,12 +22,6 @@ func TestCommands(t *testing.T) {
 	fmt.Println("test database:", td)
 	assert.NoError(err)
 
-	bf, err := os.Create(path.Join(td, "bundle.js"))
-	assert.NoError(err)
-	_, err = bf.Write([]byte("function futz(k, v){ db.put(k, v) }; function echo(v) { return v; };\n"))
-	assert.NoError(err)
-	assert.NoError(bf.Close())
-
 	tc := []struct {
 		label string
 		in    string
@@ -47,51 +39,35 @@ func TestCommands(t *testing.T) {
 			"",
 		},
 		{
-			"exec unknown-function",
+			"put missing-key",
 			"",
-			fmt.Sprintf("exec --bundle=%s monkey", bf.Name()),
+			"put",
 			1,
 			"",
-			"Unknown function: monkey\n",
-		},
-		{
-			"exec missing-key",
-			"",
-			fmt.Sprintf("exec --bundle=%s futz", bf.Name()),
-			1,
-			"",
-			"Error: Invalid id\n    at bootstrap.js:20:14\n    at bootstrap.js:26:4\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n\n",
+			"required argument 'id' not provided\n",
 		},
 		{
 			"exec missing-val",
 			"",
-			fmt.Sprintf("exec --bundle=%s futz foo", bf.Name()),
+			"put foo",
 			1,
 			"",
-			"Error: Invalid value\n    at bootstrap.js:29:15\n    at futz (bundle.js:1:22)\n    at apply (<native code>)\n    at recv (bootstrap.js:67:12)\n\n",
+			"EOF\n",
 		},
 		{
-			"exec good",
-			"",
-			fmt.Sprintf("exec --bundle=%s futz foo bar", bf.Name()),
+			"put good",
+			"\"bar\"",
+			"put foo",
 			0,
 			"",
 			"",
 		},
 		{
-			"log exec good",
+			"log put good",
 			"",
 			"log --no-pager",
 			0,
-			fmt.Sprintf("commit dq05ge0eu8rh74buuh2tq31pnlsp9bvs\nCreated:     %s\nStatus:      PENDING\nMerged:      %s\nTransaction: futz(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n", time.Now(), time.Now()),
-			"",
-		},
-		{
-			"exec echo",
-			"",
-			fmt.Sprintf("exec --bundle=%s echo monkey", bf.Name()),
-			0,
-			`"monkey"`,
+			"commit nti2kt1b288sfhdmqkgnjrog52a7m8ob\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n",
 			"",
 		},
 		{

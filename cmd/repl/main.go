@@ -2,14 +2,12 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"runtime/pprof"
 	"runtime/trace"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -28,7 +26,6 @@ import (
 	"roci.dev/diff-server/util/tbl"
 	"roci.dev/diff-server/util/version"
 	"roci.dev/replicache-client/db"
-	execpkg "roci.dev/replicache-client/exec"
 )
 
 const (
@@ -144,7 +141,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	scan(app, getDB, out, errs)
 	put(app, getDB, in)
 	del(app, getDB, out)
-	exec(app, getDB, out)
 	sync(app, getDB)
 	drop(app, getSpec, in, out)
 	logCmd(app, getDB, out)
@@ -163,58 +159,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 type gdb func() (db.DB, error)
 type gsp func() (spec.Spec, error)
-
-func exec(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("exec", "Execute a bundle function.")
-
-	bundle := kc.Flag("bundle", "Filename of bundle to execute").PlaceHolder("BUNDLEFILE").Required().File()
-	name := kc.Arg("name", "Name of function from bundle to execute.").Required().String()
-	raw := kc.Arg("args", "JSON-formatted arguments to the function. For convenience, bare strings are also supported.").Strings()
-
-	parse := func(s string, noms types.ValueReadWriter) (types.Value, error) {
-		switch s {
-		case "true":
-			return types.Bool(true), nil
-		case "false":
-			return types.Bool(false), nil
-		}
-		switch s[0] {
-		case '[', '{', '"':
-			return jn.FromJSON(strings.NewReader(s), noms, jn.FromOptions{})
-		default:
-			if f, err := strconv.ParseFloat(s, 10); err == nil {
-				return types.Number(f), nil
-			}
-		}
-		return types.String(s), nil
-	}
-
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		db, err := gdb()
-		if err != nil {
-			return err
-		}
-
-		buf := &bytes.Buffer{}
-		_, err = io.Copy(buf, *bundle)
-		chk.NoError(err)
-		err = db.PutBundle(buf.Bytes())
-
-		args := make([]types.Value, 0, len(*raw))
-		for _, r := range *raw {
-			v, err := parse(r, db.Noms())
-			if err != nil {
-				return err
-			}
-			args = append(args, v)
-		}
-		output, err := db.Exec(*name, types.NewList(db.Noms(), args...))
-		if output != nil {
-			types.WriteEncodedValue(out, output)
-		}
-		return err
-	})
-}
 
 func has(parent *kingpin.Application, gdb gdb, out io.Writer) {
 	kc := parent.Command("has", "Check whether a value exists in the database.")
@@ -258,9 +202,9 @@ func get(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 	kc := parent.Command("scan", "Scans values in-order from the database.")
-	opts := execpkg.ScanOptions{
-		Start: &execpkg.ScanBound{
-			ID:    &execpkg.ScanID{},
+	opts := db.ScanOptions{
+		Start: &db.ScanBound{
+			ID:    &db.ScanID{},
 			Index: new(uint64),
 		},
 	}
@@ -323,7 +267,6 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a this client server.")
-	bundle := kc.Flag("bundle", "Source of bundle functions").PlaceHolder("BUNDLEFILE").File()
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -331,13 +274,6 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		if err != nil {
 			return err
 		}
-
-		buf := &bytes.Buffer{}
-		if *bundle != nil {
-			_, err = io.Copy(buf, *bundle)
-			chk.NoError(err)
-		}
-		err = db.PutBundle(buf.Bytes())
 
 		// TODO: progress
 		return db.RequestSync(*remoteSpec, nil)

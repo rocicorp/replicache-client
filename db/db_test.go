@@ -26,9 +26,9 @@ func TestGenesis(t *testing.T) {
 	db, _ := LoadTempDB(assert)
 
 	assert.False(db.Has("foo"))
-	b := db.Bundle()
-	assert.Nil(b)
-
+	v, err := db.Get("foo")
+	assert.Nil(v)
+	assert.NoError(err)
 	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "").Original))
 }
 
@@ -87,85 +87,6 @@ func TestDel(t *testing.T) {
 	ok, err = db.Del("foo")
 	assert.NoError(err)
 	assert.False(ok)
-}
-
-func TestBundleInvalid(t *testing.T) {
-	assert := assert.New(t)
-	db, dir := LoadTempDB(assert)
-
-	err := db.PutBundle([]byte("bundlebundle"))
-	assert.EqualError(err, "ReferenceError: 'bundlebundle' is not defined\n    at bundle.js:1:1\n")
-
-	dbs := []*DB{db, reloadDB(assert, dir)}
-	for _, d := range dbs {
-		act := d.Bundle()
-		assert.Equal([]byte(nil), act)
-	}
-}
-
-func TestBundle(t *testing.T) {
-	assert := assert.New(t)
-	db, dir := LoadTempDB(assert)
-
-	exp := []byte("function foo(){}")
-	err := db.PutBundle(exp)
-	assert.NoError(err)
-
-	act := db.Bundle()
-	assert.Equal(exp, act)
-
-	db = reloadDB(assert, dir)
-	act = db.Bundle()
-	assert.Nil(act)
-}
-
-func TestExec(t *testing.T) {
-	assert := assert.New(t)
-	db, dir := LoadTempDB(assert)
-
-	code := `function append(k, s) {
-	var val = db.get(k) || [];
-	val.push(s);
-	db.put(k, val);
-}
-`
-
-	db.PutBundle([]byte(code))
-
-	out, err := db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("foo")))
-	assert.NoError(err)
-	assert.Nil(out)
-	out, err = db.Exec("append", types.NewList(db.noms, types.String("log"), types.String("bar")))
-	assert.NoError(err)
-	assert.Nil(out)
-
-	dbs := []*DB{db, reloadDB(assert, dir)}
-	for _, d := range dbs {
-		act, err := d.Get("log")
-		assert.NoError(err)
-		assert.True(types.NewList(d.noms, types.String("foo"), types.String("bar")).Equals(act))
-	}
-}
-
-func TestReadTransaction(t *testing.T) {
-	assert := assert.New(t)
-	db, _ := LoadTempDB(assert)
-
-	code := `function write(v) { db.put("foo", v) } function read() { return db.get("foo") }`
-
-	db.PutBundle([]byte(code))
-
-	out, err := db.Exec("write", types.NewList(db.noms, types.String("bar")))
-	assert.NoError(err)
-	assert.Nil(out)
-	h := db.head.Original
-
-	out, err = db.Exec("read", types.NewList(db.noms))
-	assert.NoError(err)
-	assert.Equal("bar", string(out.(types.String)))
-
-	// Read-only transactions shouldn't add a commit
-	assert.True(h.Equals(db.head.Original))
 }
 
 func TestLoadBadSpec(t *testing.T) {

@@ -30,9 +30,6 @@ func TestBasics(t *testing.T) {
 
 	const invalidRequest = ""
 	const invalidRequestError = "unexpected end of JSON input"
-	code, err := json.Marshal(`function add(key, d) { var v = db.get(key) || 0; v += d; db.put(key, v); return v; }
-	function log(key, val) { var v = db.get(key) || []; v.push(val); db.put(key, v); }`)
-	assert.NoError(err)
 
 	tc := []struct {
 		rpc              string
@@ -65,21 +62,8 @@ func TestBasics(t *testing.T) {
 		{"get", invalidRequest, ``, invalidRequestError},
 		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
 
-		// putBundle
-		{"putBundle", invalidRequest, ``, invalidRequestError},
-		{"putBundle", fmt.Sprintf(`{"code": %s}`, string(code)), `{"root":"nti2kt1b288sfhdmqkgnjrog52a7m8ob"}`, ""},
-
-		// getBundle
-		{"getBundle", invalidRequest, ``, invalidRequestError},
-		{"getBundle", `{}`, fmt.Sprintf(`{"code":%s}`, string(code)), ""},
-
-		// exec
-		{"exec", invalidRequest, ``, invalidRequestError},
-		{"exec", `{"name": "add", "args": ["bar", 2]}`, `{"result":2,"root":"01aj0nvumggim5hkm0atuf0s73p9l51e"}`, ""},
-		{"get", `{"id": "bar"}`, `{"has":true,"value":2}`, ""},
-
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"dsvkq4dji7v7kbj70b5tml1go53k516q"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"qdslr0hbatfkem9ag30sgc0bs6r7qtbf"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},

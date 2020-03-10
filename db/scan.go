@@ -7,18 +7,39 @@ import (
 
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/replicache-client/exec"
 )
 
 const (
 	defaultScanLimit = 50
 )
 
-func (db *DB) Scan(opts exec.ScanOptions) ([]exec.ScanItem, error) {
+type ScanID struct {
+	Value     string `json:"value,omitempty"`
+	Exclusive bool   `json:"exclusive,omitempty"`
+}
+
+type ScanBound struct {
+	ID    *ScanID `json:"id,omitempty"`
+	Index *uint64 `json:"index,omitempty"`
+}
+
+type ScanOptions struct {
+	Prefix string     `json:"prefix,omitempty"`
+	Start  *ScanBound `json:"start,omitempty"`
+	Limit  int        `json:"limit,omitempty"`
+	// Future: EndAtID, EndBeforeID
+}
+
+type ScanItem struct {
+	ID    string       `json:"id"`
+	Value jsnoms.Value `json:"value"`
+}
+
+func (db *DB) Scan(opts ScanOptions) ([]ScanItem, error) {
 	return scan(db.head.Data(db.noms), opts)
 }
 
-func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
+func scan(data types.Map, opts ScanOptions) ([]ScanItem, error) {
 	var it *types.MapIterator
 
 	updateIter := func(cand *types.MapIterator) {
@@ -63,7 +84,7 @@ func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
 		lim = 50
 	}
 
-	res := []exec.ScanItem{}
+	res := []ScanItem{}
 	for ; it.Valid(); it.Next() {
 		k, v := it.Entry()
 		chk.True(k.Kind() == types.StringKind, "Only keys with string kinds are supported, Noms schema check should have caught this")
@@ -71,7 +92,7 @@ func scan(data types.Map, opts exec.ScanOptions) ([]exec.ScanItem, error) {
 		if opts.Prefix != "" && !strings.HasPrefix(ks, opts.Prefix) {
 			break
 		}
-		res = append(res, exec.ScanItem{
+		res = append(res, ScanItem{
 			ID:    ks,
 			Value: jsnoms.Make(nil, v),
 		})

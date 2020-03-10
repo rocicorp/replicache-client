@@ -115,12 +115,6 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return conn.dispatchPut(data)
 	case "del":
 		return conn.dispatchDel(data)
-	case "getBundle":
-		return conn.dispatchGetBundle(data)
-	case "putBundle":
-		return conn.dispatchPutBundle(data)
-	case "exec":
-		return conn.dispatchExec(data)
 	case "requestSync":
 		return conn.dispatchRequestSync(data)
 	case "syncProgress":

@@ -41,7 +41,7 @@ func benchmarkExec(http bool, b *testing.B) {
 		fmt.Println(dir)
 	}
 
-	db.PutBundle([]byte("function put(k, v) { db.put(k, v); }"))
+	//db.PutBundle([]byte("function put(k, v) { db.put(k, v); }"))
 
 	for n := 0; n < b.N; n++ {
 		_, err := db.Exec("put", types.NewList(db.Noms(), types.String("foo"), types.Number(n)))

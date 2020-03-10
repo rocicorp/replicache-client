@@ -2,8 +2,6 @@ package db
 
 import (
 	"github.com/attic-labs/noms/go/types"
-
-	"roci.dev/replicache-client/exec"
 )
 
 type editor struct {
@@ -31,7 +29,7 @@ func (ed editor) Get(id string) (types.Value, error) {
 	return vv.Value(), nil
 }
 
-func (ed editor) Scan(opts exec.ScanOptions) (r []exec.ScanItem, err error) {
+func (ed editor) Scan(opts ScanOptions) (r []ScanItem, err error) {
 	// Blech, this sucks. We need to build the map because Noms MapEditor doesn't support scans.
 	// Implementing them is more effort than I have avaiable right now.
 	m := ed.data.Map()

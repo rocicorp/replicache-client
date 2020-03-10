@@ -8,8 +8,6 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
-
-	"roci.dev/replicache-client/exec"
 )
 
 func TestScan(t *testing.T) {
@@ -35,66 +33,66 @@ func TestScan(t *testing.T) {
 	}
 
 	tc := []struct {
-		opts          exec.ScanOptions
+		opts          ScanOptions
 		expected      []string
 		expectedError error
 	}{
 		// no options
-		{exec.ScanOptions{}, []string{"", "a", "ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{}}, []string{"", "a", "ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{}}}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{}}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{}}}, []string{"", "a", "ba", "bb"}, nil},
 
 		// prefix alone
-		{exec.ScanOptions{Prefix: "a"}, []string{"a"}, nil},
-		{exec.ScanOptions{Prefix: "b"}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Prefix: "b", Limit: 1}, []string{"ba"}, nil},
-		{exec.ScanOptions{Prefix: "b", Limit: 100}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Prefix: "c"}, []string{}, nil},
+		{ScanOptions{Prefix: "a"}, []string{"a"}, nil},
+		{ScanOptions{Prefix: "b"}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Prefix: "b", Limit: 1}, []string{"ba"}, nil},
+		{ScanOptions{Prefix: "b", Limit: 100}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Prefix: "c"}, []string{}, nil},
 
 		// start.id alone
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a"}}}, []string{"a", "ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "aa"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "aa", Exclusive: true}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a"}}, Limit: 2}, []string{"a", "ba"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "bb"}}}, []string{"bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "bb", Exclusive: true}}}, []string{}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{ID: &exec.ScanID{Value: "c"}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "a"}}}, []string{"a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "aa"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "aa", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "a"}}, Limit: 2}, []string{"a", "ba"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "bb"}}}, []string{"bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "bb", Exclusive: true}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{Value: "c"}}}, []string{}, nil},
 
 		// start.id and prefix together
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a"}}}, []string{"a"}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{ID: &exec.ScanID{Value: "b"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "b", Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Prefix: "c", Start: &exec.ScanBound{ID: &exec.ScanID{Value: "a"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{ID: &exec.ScanID{Value: "c"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{ID: &ScanID{Value: "a"}}}, []string{"a"}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{ID: &ScanID{Value: "b"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "b", Start: &ScanBound{ID: &ScanID{Value: "a"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Prefix: "c", Start: &ScanBound{ID: &ScanID{Value: "a"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{ID: &ScanID{Value: "c"}}}, []string{}, nil},
 
 		// start.index alone
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(0)}}, []string{"", "a", "ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1)}}, []string{"a", "ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1)}, Limit: 2}, []string{"a", "ba"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(4)}}, []string{}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(100)}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(0)}}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1)}}, []string{"a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1)}, Limit: 2}, []string{"a", "ba"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(4)}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(100)}}, []string{}, nil},
 
 		// start.index and start.id together
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "b"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "b", Exclusive: true}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "ba"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "ba", Exclusive: true}}}, []string{"bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(2), ID: &exec.ScanID{Value: "a"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(2), ID: &exec.ScanID{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(4), ID: &exec.ScanID{Value: "a"}}}, []string{}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "bb", Exclusive: true}}}, []string{}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "c"}}}, []string{}, nil},
-		{exec.ScanOptions{Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "z"}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "b"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "b", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "ba"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "ba", Exclusive: true}}}, []string{"bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(2), ID: &ScanID{Value: "a"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(2), ID: &ScanID{Value: "a", Exclusive: true}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(4), ID: &ScanID{Value: "a"}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "bb", Exclusive: true}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "c"}}}, []string{}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "z"}}}, []string{}, nil},
 
 		// prefix, start.index, and start.id together
-		{exec.ScanOptions{Prefix: "b", Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "b"}}}, []string{"ba", "bb"}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(1), ID: &exec.ScanID{Value: "b"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), ID: &exec.ScanID{Value: "b"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), ID: &exec.ScanID{Value: "a"}}}, []string{"a"}, nil},
-		{exec.ScanOptions{Prefix: "c", Start: &exec.ScanBound{Index: index(0), ID: &exec.ScanID{Value: "a"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(100), ID: &exec.ScanID{Value: "a"}}}, []string{}, nil},
-		{exec.ScanOptions{Prefix: "a", Start: &exec.ScanBound{Index: index(0), ID: &exec.ScanID{Value: "z"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "b", Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "b"}}}, []string{"ba", "bb"}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(1), ID: &ScanID{Value: "b"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(0), ID: &ScanID{Value: "b"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(0), ID: &ScanID{Value: "a"}}}, []string{"a"}, nil},
+		{ScanOptions{Prefix: "c", Start: &ScanBound{Index: index(0), ID: &ScanID{Value: "a"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(100), ID: &ScanID{Value: "a"}}}, []string{}, nil},
+		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(0), ID: &ScanID{Value: "z"}}}, []string{}, nil},
 	}
 
 	for i, t := range tc {

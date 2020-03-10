@@ -8,7 +8,6 @@ import (
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/replicache-client/db"
-	"roci.dev/replicache-client/exec"
 )
 
 type connection struct {
@@ -80,7 +79,7 @@ func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, err := conn.db.Scan(exec.ScanOptions(req))
+	items, err := conn.db.Scan(db.ScanOptions(req))
 	if err != nil {
 		return nil, err
 	}
@@ -125,60 +124,6 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 		Root: jsnoms.Hash{
 			Hash: conn.db.Hash(),
 		},
-	}
-	return mustMarshal(res), nil
-}
-
-func (conn *connection) dispatchGetBundle(reqBytes []byte) ([]byte, error) {
-	var req GetBundleRequest
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-	return mustMarshal(GetBundleResponse{
-		Code: string(conn.db.Bundle()),
-	}), nil
-}
-
-func (conn *connection) dispatchPutBundle(reqBytes []byte) ([]byte, error) {
-	var req PutBundleRequest
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-	err = conn.db.PutBundle([]byte(req.Code))
-	if err != nil {
-		return nil, errors.New(err.Error())
-	}
-	res := PutBundleResponse{
-		Root: jsnoms.Hash{
-			Hash: conn.db.Hash(),
-		},
-	}
-	return mustMarshal(res), nil
-}
-
-func (conn *connection) dispatchExec(reqBytes []byte) ([]byte, error) {
-	req := ExecRequest{
-		Args: jsnoms.List{
-			Value: jsnoms.Make(conn.db.Noms(), nil),
-		},
-	}
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-	output, err := conn.db.Exec(req.Name, req.Args.List())
-	if err != nil {
-		return nil, err
-	}
-	res := ExecResponse{
-		Root: jsnoms.Hash{
-			Hash: conn.db.Hash(),
-		},
-	}
-	if output != nil {
-		res.Result = jsnoms.New(conn.db.Noms(), output)
 	}
 	return mustMarshal(res), nil
 }

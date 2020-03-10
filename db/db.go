@@ -1,9 +1,7 @@
-// Package db implements the core database abstraction of Replicache. It provides facilities to import
-// transaction bundles, execute transactions, and synchronize Replicache databases.
+// Package db implements the core database abstraction of Replicache.
 package db
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -18,7 +16,6 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/diff-server/util/time"
-	"roci.dev/replicache-client/exec"
 )
 
 const (
@@ -27,10 +24,9 @@ const (
 )
 
 type DB struct {
-	noms   datas.Database
-	head   Commit
-	bundle []byte
-	mu     sync.Mutex
+	noms datas.Database
+	head Commit
+	mu   sync.Mutex
 }
 
 func Load(sp spec.Spec) (*DB, error) {
@@ -122,28 +118,14 @@ func (db *DB) Get(id string) (types.Value, error) {
 
 func (db *DB) Put(path string, v types.Value) error {
 	defer db.lock()()
-	_, err := db.execInternal(types.Blob{}, ".putValue", types.NewList(db.noms, types.String(path), v))
+	_, err := db.execInternal(".putValue", types.NewList(db.noms, types.String(path), v))
 	return err
 }
 
 func (db *DB) Del(path string) (ok bool, err error) {
 	defer db.lock()()
-	v, err := db.execInternal(types.Blob{}, ".delValue", types.NewList(db.noms, types.String(path)))
+	v, err := db.execInternal(".delValue", types.NewList(db.noms, types.String(path)))
 	return bool(v.(types.Bool)), err
-}
-
-func (db *DB) Bundle() []byte {
-	return db.bundle
-}
-
-func (db *DB) PutBundle(b []byte) error {
-	err := validateBundle(b, db.noms)
-	if err != nil {
-		return err
-	}
-	defer db.lock()()
-	db.bundle = b
-	return nil
 }
 
 // Exec executes a transaction against the database atomically.
@@ -186,7 +168,7 @@ func (db *DB) Reload() error {
 	return db.init()
 }
 
-func (db *DB) execInternal(bundle types.Blob, function string, args types.List) (types.Value, error) {
+func (db *DB) execInternal(function string, args types.List) (types.Value, error) {
 	basis := types.NewRef(db.head.Original)
 	newData, output, isWrite, err := db.execImpl(basis, function, args)
 	if err != nil {
@@ -248,14 +230,7 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 			break
 		}
 	} else {
-		ed := &editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
-		o, err := exec.Run(ed, bytes.NewReader(db.bundle), function, args)
-		if err != nil {
-			return types.Ref{}, nil, false, err
-		}
-		isWrite = ed.receivedMutAttempt
-		newData = db.noms.WriteValue(ed.Finalize())
-		output = o
+		d.Panic("NON-INTERNAL TRANSACTIONS DISABLED FOR NOW")
 	}
 
 	return newData, output, isWrite, nil
@@ -266,14 +241,4 @@ func (db *DB) lock() func() {
 	return func() {
 		db.mu.Unlock()
 	}
-}
-
-func validateBundle(bundle []byte, noms types.ValueReadWriter) error {
-	// TODO: Passing editor is not really necessary because the script cannot call
-	// it because it only has access to the `db` object which is passed as a param
-	// to transaction functions. We only need to pass something here because the
-	// impl of exec.Run() requires ed.noms.
-	ed := &editor{noms: noms, data: nil}
-	_, err := exec.Run(ed, bytes.NewReader(bundle), "", types.NewList(noms))
-	return err
 }
