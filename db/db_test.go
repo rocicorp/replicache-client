@@ -8,6 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/kv"
 )
 
 func reloadDB(assert *assert.Assertions, dir string) (db *DB) {
@@ -29,7 +30,8 @@ func TestGenesis(t *testing.T) {
 	v, err := db.Get("foo")
 	assert.Nil(v)
 	assert.NoError(err)
-	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "").Original))
+	m := kv.NewMap(db.noms)
+	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String())).Original))
 }
 
 func TestData(t *testing.T) {
@@ -50,7 +52,7 @@ func TestData(t *testing.T) {
 		assert.True(ok)
 		act, err := d.Get("foo")
 		assert.NoError(err)
-		assert.True(act.Equals(exp))
+		assert.True(act.Equals(exp), "expected %s got %s", exp, act)
 
 		ok, err = d.Has("bar")
 		assert.NoError(err)

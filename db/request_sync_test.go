@@ -12,6 +12,7 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
@@ -21,7 +22,7 @@ func TestRequestSync(t *testing.T) {
 	tc := []struct {
 		label                    string
 		initialState             map[string]string
-		initialBasis             string
+		initialStateID           string
 		reqError                 bool
 		respCode                 int
 		respBody                 string
@@ -36,7 +37,7 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[],"commitID":"11111111111111111111111111111111","nomsChecksum":"t13tdcmq2d3pkpt9avk4p4nbt1oagaa3"}`,
+			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000"}`,
 			"",
 			false,
 			map[string]string{},
@@ -48,10 +49,10 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"11111111111111111111111111111111","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d"}`,
 			"",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
@@ -60,106 +61,106 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d"}`,
 			"",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"22222222222222222222222222222222",
 		},
 		{
 			"network-error",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			true,
 			http.StatusOK,
 			``,
-			`Post http://127.0.0.1:\d+/handleSync: dial tcp 127.0.0.1:\d+: connect: connection refused`,
+			`Post http://127.0.0.1:\d+/handlePull: dial tcp 127.0.0.1:\d+: connect: connection refused`,
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"http-error",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusBadRequest,
 			"You have made an invalid request",
 			"400 Bad Request: You have made an invalid request",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"invalid-response",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
 			"this isn't valid json!",
-			`Response from http://127.0.0.1:\d+/handleSync is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
+			`Response from http://127.0.0.1:\d+/handlePull is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"empty-response",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
 			"",
-			`Response from http://127.0.0.1:\d+/handleSync is not valid JSON: EOF`,
+			`Response from http://127.0.0.1:\d+/handlePull is not valid JSON: EOF`,
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"nuke-first-patch",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/u/foo","value":"baz"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"e4ankqlqffbmkl8bek60auevqti3gbgi"}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"0c3e8305"}`,
 			"",
 			false,
-			map[string]string{"foo": "baz"},
+			map[string]string{"foo": `"baz"`},
 			"22222222222222222222222222222222",
 		},
 		{
 			"invalid-patch-nuke-late-patch",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo","value":"baz"},{"op":"remove","path":"/"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
-			"Unsupported JSON Patch operation: remove with path: /",
+			`{"patch":[{"op":"add","path":"/foo","value":"baz"},{"op":"remove","path":""}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d"}`,
+			"couldnt apply patch",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"invalid-patch-bad-op",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
-			"Cannot unmarshal /u/foo: EOF",
+			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d"}`,
+			"couldnt apply patch: EOF",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
 			"invalid-patch-bad-op",
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"monkey"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"am8lvhrbscqkngg75jaiubirapurghv9"}`,
-			"Unsupported JSON Patch operation: monkey with path: ",
+			`{"patch":[{"op":"monkey"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d"}`,
+			"couldnt apply patch: Invalid path",
 			false,
-			map[string]string{"foo": "bar"},
+			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 		},
 		{
@@ -168,7 +169,7 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"commitID":"22222222222222222222222222222222","nomsChecksum":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`,
+			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"aaaaaaaa"}`,
 			"Checksum mismatch!",
 			false,
 			map[string]string{},
@@ -191,23 +192,24 @@ func TestRequestSync(t *testing.T) {
 	for _, t := range tc {
 		db, dir := LoadTempDB(assert)
 		fmt.Println("dir", dir)
-		g := makeGenesis(db.noms, t.initialBasis)
+
+		ed := kv.NewMap(db.noms).Edit()
 		if t.initialState != nil {
-			ed := g.Data(db.noms).Edit()
 			for k, v := range t.initialState {
-				ed.Set(types.String(k), types.String(v))
+				assert.NoError(ed.Set(k, []byte(v)))
 			}
-			g.Value.Data = db.noms.WriteValue(ed.Map())
 		}
+		m := ed.Build()
+		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 		db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, g)))
 		err := db.Reload()
 		assert.NoError(err, t.label)
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var reqBody servetypes.HandleSyncRequest
+			var reqBody servetypes.PullRequest
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
-			assert.Equal(t.initialBasis, reqBody.Basis, t.label)
+			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
 			w.WriteHeader(t.respCode)
 			w.Write([]byte(t.respBody))
 		}))
@@ -224,18 +226,20 @@ func TestRequestSync(t *testing.T) {
 			assert.NoError(err, t.label)
 		} else {
 			assert.Regexp(t.expectedError, err.Error(), t.label)
-			_, ok := err.(SyncAuthError)
+			_, ok := err.(PullAuthError)
 			assert.Equal(t.expectedErrorIsAuthError, ok, t.label)
 		}
 
-		ee := types.NewMap(db.noms).Edit()
+		ee := kv.NewMap(db.noms).Edit()
 		for k, v := range t.expectedData {
-			ee.Set(types.String(k), types.String(v))
+			assert.NoError(ee.Set(k, []byte(v)), t.label)
 		}
-		expected := ee.Map()
-		assert.True(expected.Equals(db.head.Data(db.noms)), t.label)
+		expected := ee.Build()
+		gotChecksum, err := kv.ChecksumFromString(string(db.head.Value.Checksum))
+		assert.NoError(err)
+		assert.True(expected.Checksum().Equal(*gotChecksum), t.label)
 
-		assert.Equal(t.expectedBasis, db.head.Meta.Genesis.ServerCommitID, t.label)
+		assert.Equal(t.expectedBasis, db.head.Meta.Genesis.ServerStateID, t.label)
 	}
 }
 
@@ -315,7 +319,7 @@ func TestProgress(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
 		err = db.RequestSync(sp, progress)
-		assert.Regexp(`Response from http://[\d\.\:]+/handleSync is not valid JSON`, err)
+		assert.Regexp(`Response from http://[\d\.\:]+/handlePull is not valid JSON`, err)
 
 		expected := []report{}
 		if t.hasProgressHandler {

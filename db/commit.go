@@ -19,7 +19,7 @@ Struct Commit {
 	// TODO: It would be cool to call this field "op" or something, but Noms requires a "meta"
 	// top-level field.
 	meta: Struct Genesis {
-		serverCommitID?: String,  // only used on client
+		serverStateID?: String,  // only used on client
 	} |
 	Struct Tx {
 		date:   Struct DateTime {
@@ -36,6 +36,7 @@ Struct Commit {
 	},
 	value: Struct {
 		data: Ref<Map<String, Value>>,
+		checksum: String,
 	},
 }`)
 )
@@ -53,7 +54,7 @@ type Reorder struct {
 }
 
 type Genesis struct {
-	ServerCommitID string `noms:"serverCommitID,omitempty"`
+	ServerStateID string `noms:"serverStateID,omitempty"`
 }
 
 type Meta struct {
@@ -82,7 +83,8 @@ type Commit struct {
 	Parents []types.Ref `noms:",set"`
 	Meta    Meta
 	Value   struct {
-		Data types.Ref `noms:",omitempty"`
+		Data     types.Ref `noms:",omitempty"`
+		Checksum types.String
 	}
 	Original types.Struct `noms:",original"`
 }
@@ -206,32 +208,35 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 	return r, nil
 }
 
-func makeGenesis(noms types.ValueReadWriter, serverCommitID string) Commit {
+func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types.Ref, checksum types.String) Commit {
 	c := Commit{}
-	c.Meta.Genesis.ServerCommitID = serverCommitID
-	c.Value.Data = noms.WriteValue(types.NewMap(noms))
+	c.Meta.Genesis.ServerStateID = serverStateID
+	c.Value.Data = dataRef
+	c.Value.Checksum = checksum
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	noms.WriteValue(c.Original)
 	return c
 }
 
-func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.List, newData types.Ref) Commit {
+func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.List, newData types.Ref, checksum types.String) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
 	c.Meta.Tx.Date = d
 	c.Meta.Tx.Name = f
 	c.Meta.Tx.Args = args
 	c.Value.Data = newData
+	c.Value.Checksum = checksum
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
 
-func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newData types.Ref) Commit {
+func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newData types.Ref, checksum types.String) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis, subject}
 	c.Meta.Reorder.Date = d
 	c.Meta.Reorder.Subject = subject
 	c.Value.Data = newData
+	c.Value.Checksum = checksum
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }

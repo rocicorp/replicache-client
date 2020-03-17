@@ -10,6 +10,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/diff"
 )
 
@@ -17,13 +18,17 @@ func TestMarshal(t *testing.T) {
 	assert := assert.New(t)
 
 	noms := types.NewValueStore((&chunks.TestStorage{}).NewView())
-	emptyMap := noms.WriteValue(types.NewMap(noms))
+	emkvm := kv.NewMap(noms)
+	emptyMap := noms.WriteValue(emkvm.NomsMap())
+	emptyMapChecksum := types.String(emkvm.Checksum().String())
 
 	d := datetime.Now()
-	dr := noms.WriteValue(types.NewMap(noms, types.String("foo"), types.String("bar")))
+	drkvm := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
+	drChecksum := types.String(drkvm.Checksum().String())
+	dr := noms.WriteValue(drkvm.NomsMap())
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
-	g := makeGenesis(noms, "")
-	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, dr)
+	g := makeGenesis(noms, "", emptyMap, emptyMapChecksum)
+	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, dr, drChecksum)
 	noms.WriteValue(g.Original)
 	noms.WriteValue(tx.Original)
 
@@ -32,24 +37,26 @@ func TestMarshal(t *testing.T) {
 		exp types.Value
 	}{
 		{
-			makeGenesis(noms, ""),
+			makeGenesis(noms, "", emptyMap, emptyMapChecksum),
 			types.NewStruct("Commit", types.StructData{
 				"meta":    types.NewStruct("Genesis", types.StructData{}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"data": emptyMap,
+					"data":     emptyMap,
+					"checksum": emptyMapChecksum,
 				}),
 			}),
 		},
 		{
-			makeGenesis(noms, "foo"),
+			makeGenesis(noms, "foo", emptyMap, emptyMapChecksum),
 			types.NewStruct("Commit", types.StructData{
 				"meta": types.NewStruct("Genesis", types.StructData{
-					"serverCommitID": types.String("foo"),
+					"serverStateID": types.String("foo"),
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
-					"data": emptyMap,
+					"data":     emptyMap,
+					"checksum": emptyMapChecksum,
 				}),
 			}),
 		},
@@ -63,12 +70,13 @@ func TestMarshal(t *testing.T) {
 					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"data": dr,
+					"data":     dr,
+					"checksum": drChecksum,
 				}),
 			}),
 		},
 		{
-			makeTx(noms, types.NewRef(g.Original), d, "func", args, dr),
+			makeTx(noms, types.NewRef(g.Original), d, "func", args, dr, drChecksum),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original)),
 				"meta": types.NewStruct("Tx", types.StructData{
@@ -77,12 +85,13 @@ func TestMarshal(t *testing.T) {
 					"args": args,
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"data": dr,
+					"data":     dr,
+					"checksum": drChecksum,
 				}),
 			}),
 		},
 		{
-			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), dr),
+			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), dr, drChecksum),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
 				"meta": types.NewStruct("Reorder", types.StructData{
@@ -90,7 +99,8 @@ func TestMarshal(t *testing.T) {
 					"subject": types.NewRef(tx.Original),
 				}),
 				"value": types.NewStruct("", types.StructData{
-					"data": dr,
+					"data":     dr,
+					"checksum": drChecksum,
 				}),
 			}),
 		},

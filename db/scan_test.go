@@ -18,7 +18,7 @@ func TestScan(t *testing.T) {
 	assert.NoError(err)
 
 	put := func(k string) {
-		err = d.Put(k, types.String(k))
+		err = d.Put(k, types.String(fmt.Sprintf("\"%s\"", k)))
 		assert.NoError(err)
 	}
 

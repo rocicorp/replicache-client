@@ -2,6 +2,7 @@
 package db
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -15,6 +16,8 @@ import (
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 
+	"roci.dev/diff-server/kv"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -61,7 +64,8 @@ func New(noms datas.Database) (*DB, error) {
 func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
-		genesis := makeGenesis(db.noms, "")
+		m := kv.NewMap(db.noms)
+		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -98,7 +102,9 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 	ds := db.noms.GetDataset(REMOTE_DATASET)
 	if !ds.HasHead() {
 		// TODO: maybe setup the remote head at startup too.
-		return makeGenesis(db.noms, ""), nil
+		m := kv.NewMap(db.noms)
+		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String())), nil
+
 	}
 	err = marshal.Unmarshal(ds.Head(), &c)
 	return
@@ -109,11 +115,21 @@ func (db *DB) Hash() hash.Hash {
 }
 
 func (db *DB) Has(id string) (bool, error) {
+	// TODO fritz convert once map has has. doh.
 	return db.head.Data(db.noms).Has(types.String(id)), nil
 }
 
 func (db *DB) Get(id string) (types.Value, error) {
-	return db.head.Data(db.noms).Get(types.String(id)), nil
+	vbytes, err := kv.NewMapFromNoms(db.noms, db.head.Data(db.noms)).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	// If key doesn't exist, return nil.
+	if len(vbytes) == 0 {
+		return nil, nil
+	}
+	// TODO fritz get rid of this round trip
+	return nomsjson.FromJSON(bytes.NewReader(vbytes), db.noms, nomsjson.FromOptions{})
 }
 
 func (db *DB) Put(path string, v types.Value) error {
@@ -139,14 +155,14 @@ func (db *DB) Exec(function string, args types.List) (types.Value, error) {
 	if strings.HasPrefix(function, ".") {
 		return nil, fmt.Errorf("Cannot call system function: %s", function)
 	}
-	newData, output, isWrite, err := db.execImpl(basisRef, function, args)
+	newData, checksum, output, isWrite, err := db.execImpl(basisRef, function, args)
 	if err != nil {
 		return nil, err
 	}
 
 	// Do not add commits for read-only transactions.
 	if isWrite {
-		basis = makeTx(db.noms, basisRef, time.DateTime(), function, args, newData)
+		basis = makeTx(db.noms, basisRef, time.DateTime(), function, args, newData, checksum)
 		basisRef = db.noms.WriteValue(basis.Original)
 	}
 
@@ -170,7 +186,7 @@ func (db *DB) Reload() error {
 
 func (db *DB) execInternal(function string, args types.List) (types.Value, error) {
 	basis := types.NewRef(db.head.Original)
-	newData, output, isWrite, err := db.execImpl(basis, function, args)
+	newData, newDataChecksum, output, isWrite, err := db.execImpl(basis, function, args)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +196,7 @@ func (db *DB) execInternal(function string, args types.List) (types.Value, error
 		return output, nil
 	}
 
-	commit := makeTx(db.noms, basis, time.DateTime(), function, args, newData)
+	commit := makeTx(db.noms, basis, time.DateTime(), function, args, newData, newDataChecksum)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were
@@ -194,11 +210,11 @@ func (db *DB) execInternal(function string, args types.List) (types.Value, error
 }
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
-func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDataRef types.Ref, output types.Value, isWrite bool, err error) {
+func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDataRef types.Ref, newDataChecksum types.String, output types.Value, isWrite bool, err error) {
 	var basisCommit Commit
 	err = marshal.Unmarshal(basis.TargetValue(db.noms), &basisCommit)
 	if err != nil {
-		return types.Ref{}, nil, false, err
+		return types.Ref{}, types.String(""), nil, false, err
 	}
 
 	newData := basisCommit.Value.Data
@@ -208,24 +224,36 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 		case ".putValue":
 			k := args.Get(uint64(0))
 			v := args.Get(uint64(1))
-			ed := editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
+			ed := kv.NewMapFromNoms(db.noms, basisCommit.Data(db.noms)).Edit()
 			isWrite = true
-			err = ed.Put(string(k.(types.String)), v)
+			var b bytes.Buffer
+			err = nomsjson.ToJSON(v, &b, nomsjson.ToOptions{})
 			if err != nil {
 				return
 			}
-			newData = db.noms.WriteValue(ed.Finalize())
+			err = ed.Set(string(k.(types.String)), b.Bytes())
+			if err != nil {
+				return
+			}
+			newMap := ed.Build()
+			newDataChecksum = types.String(newMap.Checksum().String())
+			newData = db.noms.WriteValue(newMap.NomsMap())
 			break
 		case ".delValue":
 			k := args.Get(uint64(0))
-			ed := editor{noms: db.noms, data: basisCommit.Data(db.noms).Edit()}
+			nm := basisCommit.Data(db.noms)
+			m := kv.NewMapFromNoms(db.noms, nm)
+			ed := m.Edit()
 			isWrite = true
-			var ok bool
-			ok, err = ed.Del(string(k.(types.String)))
+			// TODO fritz fix this, editor needs has
+			ok := nm.Has(k)
+			err = ed.Remove(string(k.(types.String)))
 			if err != nil {
 				return
 			}
-			newData = db.noms.WriteValue(ed.Finalize())
+			newMap := ed.Build()
+			newData = db.noms.WriteValue(newMap.NomsMap())
+			newDataChecksum = types.String(newMap.Checksum().String())
 			output = types.Bool(ok)
 			break
 		}
@@ -233,7 +261,7 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 		d.Panic("NON-INTERNAL TRANSACTIONS DISABLED FOR NOW")
 	}
 
-	return newData, output, isWrite, nil
+	return newData, newDataChecksum, output, isWrite, nil
 }
 
 func (db *DB) lock() func() {

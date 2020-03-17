@@ -8,6 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/noms/diff"
 )
 
@@ -41,6 +42,7 @@ func TestRebase(t *testing.T) {
 		if c1.Original.Equals(c2.Original) {
 			return
 		}
+		fmt.Println(kv.NewMapFromNoms(noms, c1.Data(noms)).DebugString(), kv.NewMapFromNoms(noms, c2.Data(noms)).DebugString())
 		fmt.Println(c1.Original.Hash(), c2.Original.Hash())
 		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.Original.Hash(), c2.Original.Hash(), diff.Diff(c1.Original, c2.Original))
 	}
@@ -50,25 +52,27 @@ func TestRebase(t *testing.T) {
 
 	tx := func(basis Commit, arg string, ds string) Commit {
 		d := data(ds)
+		m := kv.NewMapFromNoms(db.noms, d)
 		r := makeTx(
 			noms,
 			basis.Ref(),
 			epoch,
-			".putValue",      // function
-			list("foo", arg), // args
-			write(d))         // result data
+			".putValue",                                             // function
+			list("foo", arg),                                        // args
+			write(m.NomsMap()), types.String(m.Checksum().String())) // result data
 		write(r.Original)
 		return r
 	}
 
 	ro := func(basis, subject Commit, ds string) Commit {
 		d := data(ds)
+		m := kv.NewMapFromNoms(db.noms, d)
 		r := makeReorder(
 			noms,
 			basis.Ref(),
 			epoch,
 			subject.Ref(),
-			write(d)) // result data
+			write(m.NomsMap()), types.String(m.Checksum().String())) // result data
 		write(r.Original)
 		return r
 	}
@@ -85,7 +89,6 @@ func TestRebase(t *testing.T) {
 		noms.Flush()
 		assertEqual(expected, actual)
 	}
-
 	// dest ff
 	// onto: g
 	// head: g - a

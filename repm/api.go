@@ -150,7 +150,7 @@ func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 			bytesExpected: expected,
 		}
 	})
-	if _, ok := err.(db.SyncAuthError); ok {
+	if _, ok := err.(db.PullAuthError); ok {
 		res.Error = &SyncResponseError{
 			BadAuth: err.Error(),
 		}

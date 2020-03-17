@@ -8,32 +8,61 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 
+	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 	"roci.dev/diff-server/util/chk"
 	"roci.dev/diff-server/util/countingreader"
-	"roci.dev/diff-server/util/noms/jsonpatch"
 
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/verbose"
+	"github.com/pkg/errors"
 )
 
-type SyncAuthError struct {
+type PullAuthError struct {
 	error
 }
 
 type Progress func(bytesReceived, bytesExpected uint64)
 
-// RequestSync kicks off the new patch-based sync protocol from the client side.
+func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
+	if c.Type() == CommitTypeGenesis {
+		return c, nil
+	}
+
+	for p := c; len(p.Parents) > 0; {
+		v := noms.ReadValue(p.Parents[0].Hash())
+		if v == nil {
+			return Commit{}, fmt.Errorf("could not find parent %v", p.Parents[0])
+		} else {
+			err := marshal.Unmarshal(v, &p)
+			if err != nil {
+				return Commit{}, fmt.Errorf("Error: Parent is not a commit: %#v", v)
+			}
+		}
+		if p.Type() == CommitTypeGenesis {
+			return p, nil
+		}
+	}
+
+	return Commit{}, fmt.Errorf("could not find genesis of %v", c)
+}
+
+// RequestSync pulls new server state from the client side.
 func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
-	url := fmt.Sprintf("%s/handleSync", remote.String())
-	reqBody, err := json.Marshal(servetypes.HandleSyncRequest{
-		Basis: db.head.Meta.Genesis.ServerCommitID,
+	genesis, err := findGenesis(db.noms, db.head)
+	if err != nil {
+		return err
+	}
+	url := fmt.Sprintf("%s/handlePull", remote.String())
+	// TODO test walking backwards works
+	reqBody, err := json.Marshal(servetypes.PullRequest{
+		BaseStateID: genesis.Meta.Genesis.ServerStateID,
+		Checksum:    string(genesis.Value.Checksum),
 	})
-	verbose.Log("Syncing: %s from basis %s", url, db.head.Meta.Genesis.ServerCommitID)
+	verbose.Log("Pulling: %s from baseStateID %s", url, genesis.Meta.Genesis.ServerStateID)
 	chk.NoError(err)
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
@@ -56,7 +85,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		}
 		err = fmt.Errorf("%s: %s", resp.Status, s)
 		if resp.StatusCode == http.StatusForbidden {
-			return SyncAuthError{
+			return PullAuthError{
 				err,
 			}
 		} else {
@@ -79,7 +108,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		return 0, nil
 	}
 
-	var respBody servetypes.HandleSyncResponse
+	var respBody servetypes.PullResponse
 	var r io.Reader = resp.Body
 	if progress != nil {
 		cr := &countingreader.Reader{
@@ -106,38 +135,18 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
-	var patch = respBody.Patch
-	head := makeGenesis(db.noms, respBody.CommitID)
-	if len(patch) > 0 && patch[0].Op == jsonpatch.OpRemove && patch[0].Path == "/" {
-		patch = patch[1:]
-	} else {
-		head.Value = db.head.Value
+	patchedMap, err := kv.ApplyPatch(kv.NewMapFromNoms(db.noms, genesis.Data(db.noms)), respBody.Patch)
+	if err != nil {
+		return errors.Wrap(err, "couldnt apply patch")
 	}
-
-	var ed *types.MapEditor
-	for _, op := range patch {
-		switch {
-		case strings.HasPrefix(op.Path, "/u"):
-			if ed == nil {
-				ed = db.head.Data(db.noms).Edit()
-			}
-			origPath := op.Path
-			op.Path = op.Path[2:]
-			err = jsonpatch.ApplyOne(db.noms, ed, op)
-			if err != nil {
-				return fmt.Errorf("Cannot unmarshal %s: %s", origPath, err.Error())
-			}
-		default:
-			return fmt.Errorf("Unsupported JSON Patch operation: %s with path: %s", op.Op, op.Path)
-		}
+	expectedChecksum, err := kv.ChecksumFromString(respBody.Checksum)
+	if err != nil {
+		return errors.Wrapf(err, "response checksum malformed: %s", respBody.Checksum)
 	}
-
-	if ed != nil {
-		head.Value.Data = db.noms.WriteValue(ed.Map())
+	if !patchedMap.Checksum().Equal(*expectedChecksum) {
+		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum.String(), patchedMap.Checksum().String())
 	}
-	if head.Value.Data.TargetHash().String() != respBody.NomsChecksum {
-		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", respBody.NomsChecksum, head.Value.Data.TargetHash())
-	}
-	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, head)))
+	newHead := makeGenesis(db.noms, respBody.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()))
+	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
 	return db.init()
 }

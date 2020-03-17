@@ -7,7 +7,8 @@ require (
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200222030311-471beffe7803
+	roci.dev/diff-server v0.0.0-20200310233805-798f11f79594
 )
