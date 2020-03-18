@@ -74,7 +74,7 @@ func TestRequestSync(t *testing.T) {
 			true,
 			http.StatusOK,
 			``,
-			`Post "http://127.0.0.1:\d+/handlePull": dial tcp 127.0.0.1:\d+: connect: connection refused`,
+			`Post "?http://127.0.0.1:\d+/handlePull"?: dial tcp 127.0.0.1:\d+: connect: connection refused`,
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
