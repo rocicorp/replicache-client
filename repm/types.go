@@ -63,21 +63,6 @@ type DelResponse struct {
 	Root jsnoms.Hash `json:"root"`
 }
 
-type GetBundleRequest struct {
-}
-
-type GetBundleResponse struct {
-	Code string `json:"code"`
-}
-
-type PutBundleRequest struct {
-	Code string `json:"code"`
-}
-
-type PutBundleResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
-
 type SyncRequest struct {
 	Remote jsnoms.Spec `json:"remote"`
 	Auth   string      `json:"auth,omitempty"`
