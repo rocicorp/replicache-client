@@ -16,12 +16,12 @@ import (
 	"path"
 	"runtime"
 	"runtime/debug"
-	"time"
 
 	"github.com/attic-labs/noms/go/spec"
 
 	"roci.dev/diff-server/util/chk"
 	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
 	"roci.dev/replicache-client/db"
 )

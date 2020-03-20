@@ -24,6 +24,7 @@ import (
 	"roci.dev/diff-server/util/kp"
 	rlog "roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/tbl"
+	rtime "roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
 	"roci.dev/replicache-client/db"
 )
@@ -378,12 +379,12 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 
 			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
-				Add("Created: ", initialCommit.Meta.Tx.Date.String())
+				Add("Created: ", rtime.String(initialCommit.Meta.Tx.Date.Time))
 
 			status, t := getStatus()
 			table.Add("Status: ", status)
 			if t != (time.Time{}) {
-				table.Add("Merged: ", t.String())
+				table.Add("Merged: ", rtime.String(t))
 			}
 
 			if !initialCommit.Original.Equals(c.Original) {

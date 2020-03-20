@@ -10,5 +10,5 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200310233805-798f11f79594
+	roci.dev/diff-server v0.0.0-20200320234512-6b10eec342f1
 )

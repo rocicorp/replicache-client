@@ -131,3 +131,5 @@ roci.dev/diff-server v0.0.0-20200222030311-471beffe7803 h1:+c91W121IE06Y0CtViH0g
 roci.dev/diff-server v0.0.0-20200222030311-471beffe7803/go.mod h1:wO5WOqIO5lXITWXOZNVyC/oQcNOUbo1R6cnKPtEllqw=
 roci.dev/diff-server v0.0.0-20200310233805-798f11f79594 h1:6PYAOeYFh8JacfyisIi0TL7JXLR2e1IN+vXWYVqnlW8=
 roci.dev/diff-server v0.0.0-20200310233805-798f11f79594/go.mod h1:L9iwRU5utekqAzFBgC01GfaX1fGz6ndCi8LffwcW8cI=
+roci.dev/diff-server v0.0.0-20200320234512-6b10eec342f1 h1:X1+rWY0+bV4EMYMxlOM5CPmmrRNvBzmg85R796k7CW0=
+roci.dev/diff-server v0.0.0-20200320234512-6b10eec342f1/go.mod h1:L9iwRU5utekqAzFBgC01GfaX1fGz6ndCi8LffwcW8cI=

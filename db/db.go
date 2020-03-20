@@ -129,7 +129,7 @@ func (db *DB) Get(id string) (types.Value, error) {
 		return nil, nil
 	}
 	// TODO fritz get rid of this round trip
-	return nomsjson.FromJSON(bytes.NewReader(vbytes), db.noms, nomsjson.FromOptions{})
+	return nomsjson.FromJSON(bytes.NewReader(vbytes), db.noms)
 }
 
 func (db *DB) Put(path string, v types.Value) error {
