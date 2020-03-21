@@ -58,14 +58,14 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	}
 	url := fmt.Sprintf("%s/handlePull", remote.String())
 	// TODO test walking backwards works
-	reqBody, err := json.Marshal(servetypes.PullRequest{
+	pullReq, err := json.Marshal(servetypes.PullRequest{
 		BaseStateID: genesis.Meta.Genesis.ServerStateID,
 		Checksum:    string(genesis.Value.Checksum),
 	})
 	verbose.Log("Pulling: %s from baseStateID %s", url, genesis.Meta.Genesis.ServerStateID)
 	chk.NoError(err)
 
-	req, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
+	req, err := http.NewRequest("POST", url, bytes.NewReader(pullReq))
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		return 0, nil
 	}
 
-	var respBody servetypes.PullResponse
+	var pullResp servetypes.PullResponse
 	var r io.Reader = resp.Body
 	if progress != nil {
 		cr := &countingreader.Reader{
@@ -130,23 +130,23 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 		}
 		r = cr
 	}
-	err = json.NewDecoder(r).Decode(&respBody)
+	err = json.NewDecoder(r).Decode(&pullResp)
 	if err != nil {
 		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
-	patchedMap, err := kv.ApplyPatch(kv.NewMapFromNoms(db.noms, genesis.Data(db.noms)), respBody.Patch)
+	patchedMap, err := kv.ApplyPatch(kv.NewMapFromNoms(db.noms, genesis.Data(db.noms)), pullResp.Patch)
 	if err != nil {
 		return errors.Wrap(err, "couldnt apply patch")
 	}
-	expectedChecksum, err := kv.ChecksumFromString(respBody.Checksum)
+	expectedChecksum, err := kv.ChecksumFromString(pullResp.Checksum)
 	if err != nil {
-		return errors.Wrapf(err, "response checksum malformed: %s", respBody.Checksum)
+		return errors.Wrapf(err, "response checksum malformed: %s", pullResp.Checksum)
 	}
 	if !patchedMap.Checksum().Equal(*expectedChecksum) {
 		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum.String(), patchedMap.Checksum().String())
 	}
-	newHead := makeGenesis(db.noms, respBody.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()))
+	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()), pullResp.LastTransactionID)
 	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
 	return db.init()
 }

@@ -21,13 +21,14 @@ func TestMarshal(t *testing.T) {
 	emkvm := kv.NewMap(noms)
 	emptyMap := noms.WriteValue(emkvm.NomsMap())
 	emptyMapChecksum := types.String(emkvm.Checksum().String())
+	emtpyMapLTID := "1"
 
 	d := datetime.Now()
 	drkvm := kv.NewMapFromNoms(noms, types.NewMap(noms, types.String("foo"), types.String("bar")))
 	drChecksum := types.String(drkvm.Checksum().String())
 	dr := noms.WriteValue(drkvm.NomsMap())
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
-	g := makeGenesis(noms, "", emptyMap, emptyMapChecksum)
+	g := makeGenesis(noms, "", emptyMap, emptyMapChecksum, emtpyMapLTID)
 	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, dr, drChecksum)
 	noms.WriteValue(g.Original)
 	noms.WriteValue(tx.Original)
@@ -37,7 +38,7 @@ func TestMarshal(t *testing.T) {
 		exp types.Value
 	}{
 		{
-			makeGenesis(noms, "", emptyMap, emptyMapChecksum),
+			makeGenesis(noms, "", emptyMap, emptyMapChecksum, ""),
 			types.NewStruct("Commit", types.StructData{
 				"meta":    types.NewStruct("Genesis", types.StructData{}),
 				"parents": types.NewSet(noms),
@@ -48,10 +49,11 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeGenesis(noms, "foo", emptyMap, emptyMapChecksum),
+			makeGenesis(noms, "foo", emptyMap, emptyMapChecksum, emtpyMapLTID),
 			types.NewStruct("Commit", types.StructData{
 				"meta": types.NewStruct("Genesis", types.StructData{
-					"serverStateID": types.String("foo"),
+					"lastTransactionID": types.String(emtpyMapLTID),
+					"serverStateID":     types.String("foo"),
 				}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{

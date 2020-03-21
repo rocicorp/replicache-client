@@ -65,7 +65,7 @@ func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
-		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()))
+		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -103,7 +103,7 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 	if !ds.HasHead() {
 		// TODO: maybe setup the remote head at startup too.
 		m := kv.NewMap(db.noms)
-		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String())), nil
+		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), ""), nil
 
 	}
 	err = marshal.Unmarshal(ds.Head(), &c)

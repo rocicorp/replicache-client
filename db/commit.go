@@ -19,6 +19,7 @@ Struct Commit {
 	// TODO: It would be cool to call this field "op" or something, but Noms requires a "meta"
 	// top-level field.
 	meta: Struct Genesis {
+		lastTransactionID?: String,
 		serverStateID?: String,  // only used on client
 	} |
 	Struct Tx {
@@ -54,7 +55,8 @@ type Reorder struct {
 }
 
 type Genesis struct {
-	ServerStateID string `noms:"serverStateID,omitempty"`
+	LastTransactionID string `noms:",omitempty"`
+	ServerStateID     string `noms:",omitempty"`
 }
 
 type Meta struct {
@@ -208,8 +210,9 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 	return r, nil
 }
 
-func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types.Ref, checksum types.String) Commit {
+func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types.Ref, checksum types.String, lastTransactionID string) Commit {
 	c := Commit{}
+	c.Meta.Genesis.LastTransactionID = lastTransactionID
 	c.Meta.Genesis.ServerStateID = serverStateID
 	c.Value.Data = dataRef
 	c.Value.Checksum = checksum
