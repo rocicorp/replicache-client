@@ -227,7 +227,7 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 			ed := kv.NewMapFromNoms(db.noms, basisCommit.Data(db.noms)).Edit()
 			isWrite = true
 			var b bytes.Buffer
-			err = nomsjson.ToJSON(v, &b, nomsjson.ToOptions{})
+			err = nomsjson.ToJSON(v, &b, nomsjson.ToOptions{Maps: true})
 			if err != nil {
 				return
 			}
