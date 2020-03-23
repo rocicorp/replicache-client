@@ -31,7 +31,7 @@ func TestGenesis(t *testing.T) {
 	assert.Nil(v)
 	assert.NoError(err)
 	m := kv.NewMap(db.noms)
-	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), "").Original))
+	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0).Original))
 }
 
 func TestData(t *testing.T) {

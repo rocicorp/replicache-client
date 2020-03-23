@@ -30,7 +30,7 @@ func TestRequestSync(t *testing.T) {
 		expectedErrorIsAuthError  bool
 		expectedData              map[string]string
 		expectedBaseServerStateID string
-		expectedLastTransactionID string
+		expectedLastMutationID    uint64
 	}{
 		{
 			"ok-nop",
@@ -38,12 +38,12 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000","lastTransactionID":"1"}`,
+			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000","lastMutationID":1}`,
 			"",
 			false,
 			map[string]string{},
 			"11111111111111111111111111111111",
-			"1",
+			1,
 		},
 		{
 			"ok-no-basis",
@@ -51,12 +51,12 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d","lastTransactionID":"1"}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d","lastMutationID":1}`,
 			"",
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"1",
+			1,
 		},
 		{
 			"ok-with-basis",
@@ -64,12 +64,12 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastTransactionID":"2"}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2}`,
 			"",
 			false,
 			map[string]string{"foo": `"bar"`},
 			"22222222222222222222222222222222",
-			"2",
+			2,
 		},
 		{
 			"network-error",
@@ -82,7 +82,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"http-error",
@@ -95,7 +95,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"invalid-response",
@@ -108,7 +108,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"empty-response",
@@ -121,7 +121,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"nuke-first-patch",
@@ -129,12 +129,12 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"0c3e8305","lastTransactionID":"2"}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"0c3e8305","lastMutationID":2}`,
 			"",
 			false,
 			map[string]string{"foo": `"baz"`},
 			"22222222222222222222222222222222",
-			"2",
+			2,
 		},
 		{
 			"invalid-patch-nuke-late-patch",
@@ -147,7 +147,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"invalid-patch-bad-op",
@@ -155,12 +155,12 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastTransactionID":"1"}`,
+			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
 			"couldnt apply patch: EOF",
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"invalid-patch-bad-op",
@@ -168,12 +168,12 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"monkey"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastTransactionID":"1"}`,
+			`{"patch":[{"op":"monkey"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
 			"couldnt apply patch: Invalid path",
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"checksum-mismatch",
@@ -181,12 +181,12 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"aaaaaaaa"},"lastTransactionID":"1"`,
+			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"aaaaaaaa"},"lastMutationID":1`,
 			"Checksum mismatch!",
 			false,
 			map[string]string{},
 			"11111111111111111111111111111111",
-			"",
+			0,
 		},
 		{
 			"auth-error",
@@ -199,7 +199,7 @@ func TestRequestSync(t *testing.T) {
 			true,
 			map[string]string{},
 			"",
-			"",
+			0,
 		},
 	}
 
@@ -214,7 +214,7 @@ func TestRequestSync(t *testing.T) {
 			}
 		}
 		m := ed.Build()
-		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), "" /*lastTransactionID*/)
+		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
 		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, g)))
 		assert.NoError(err)
 		err = db.Reload()
@@ -225,6 +225,8 @@ func TestRequestSync(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
+			assert.Equal(fakeAccountID, reqBody.AccountID)
+			assert.Equal(fakeClientID, reqBody.ClientID)
 			w.WriteHeader(t.respCode)
 			w.Write([]byte(t.respBody))
 		}))
@@ -254,8 +256,10 @@ func TestRequestSync(t *testing.T) {
 		assert.NoError(err)
 		assert.True(expected.Checksum().Equal(*gotChecksum), t.label)
 
-		assert.Equal(t.expectedBaseServerStateID, db.head.Meta.Genesis.ServerStateID, t.label)
-		assert.Equal(t.expectedLastTransactionID, db.head.Meta.Genesis.LastTransactionID, t.label)
+		if t.expectedError == "" {
+			assert.Equal(t.expectedBaseServerStateID, db.head.Meta.Genesis.ServerStateID, t.label)
+			assert.Equal(t.expectedLastMutationID, db.head.Meta.Genesis.LastMutationID, t.label)
+		}
 	}
 }
 

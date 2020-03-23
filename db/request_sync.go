@@ -50,6 +50,9 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	return Commit{}, fmt.Errorf("could not find genesis of %v", c)
 }
 
+const fakeAccountID = "TODO fake account id"
+const fakeClientID = "TODO fake client id"
+
 // RequestSync pulls new server state from the client side.
 func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	genesis, err := findGenesis(db.noms, db.head)
@@ -59,6 +62,8 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	url := fmt.Sprintf("%s/handlePull", remote.String())
 	// TODO test walking backwards works
 	pullReq, err := json.Marshal(servetypes.PullRequest{
+		AccountID:   fakeAccountID, // TODO
+		ClientID:    fakeClientID,  // TODO
 		BaseStateID: genesis.Meta.Genesis.ServerStateID,
 		Checksum:    string(genesis.Value.Checksum),
 	})
@@ -146,7 +151,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	if !patchedMap.Checksum().Equal(*expectedChecksum) {
 		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum.String(), patchedMap.Checksum().String())
 	}
-	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()), pullResp.LastTransactionID)
+	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()), pullResp.LastMutationID)
 	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
 	return db.init()
 }
