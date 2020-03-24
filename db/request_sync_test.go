@@ -225,7 +225,7 @@ func TestRequestSync(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
-			assert.Equal(fakeAccountID, reqBody.AccountID)
+			assert.Equal(sandboxAccountID, reqBody.AccountID)
 			assert.Equal(fakeClientID, reqBody.ClientID)
 			w.WriteHeader(t.respCode)
 			w.Write([]byte(t.respBody))
