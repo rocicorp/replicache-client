@@ -27,9 +27,10 @@ const (
 )
 
 type DB struct {
-	noms datas.Database
-	head Commit
-	mu   sync.Mutex
+	noms     datas.Database
+	head     Commit
+	clientID string
+	mu       sync.Mutex
 }
 
 func Load(sp spec.Spec) (*DB, error) {
@@ -62,6 +63,11 @@ func New(noms datas.Database) (*DB, error) {
 }
 
 func (db *DB) init() error {
+	cid, err := initClientID(db.noms)
+	if err != nil {
+		return err
+	}
+
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
@@ -71,6 +77,7 @@ func (db *DB) init() error {
 		if err != nil {
 			return err
 		}
+		db.clientID = cid
 		db.head = genesis
 		return nil
 	}
@@ -81,11 +88,12 @@ func (db *DB) init() error {
 	}
 
 	var head Commit
-	err := marshal.Unmarshal(ds.Head(), &head)
+	err = marshal.Unmarshal(ds.Head(), &head)
 	if err != nil {
 		return err
 	}
 
+	db.clientID = cid
 	db.head = head
 	return nil
 }

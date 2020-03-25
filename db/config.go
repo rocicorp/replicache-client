@@ -1,4 +1,4 @@
-package repm
+package db
 
 import (
 	"fmt"
@@ -10,12 +10,12 @@ import (
 )
 
 func initClientID(noms datas.Database) (string, error) {
-	ds := noms.GetDataset("_clientConfig")
+	ds := noms.GetDataset("config")
 	var cc ClientConfig
 	if ds.HasHead() {
-		err := marshal.Unmarshal(ds.Head(), &cc)
+		err := marshal.Unmarshal(ds.HeadValue(), &cc)
 		if err != nil {
-			return "", fmt.Errorf("Could not unmarshal clientConfig: %s", err.Error())
+			return "", fmt.Errorf("Could not unmarshal config: %s", err.Error())
 		}
 	}
 	if cc.ClientID == "" {

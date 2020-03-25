@@ -24,7 +24,7 @@ func reloadDB(assert *assert.Assertions, dir string) (db *DB) {
 func TestGenesis(t *testing.T) {
 	assert := assert.New(t)
 
-	db, _ := LoadTempDB(assert)
+	db, dir := LoadTempDB(assert)
 
 	assert.False(db.Has("foo"))
 	v, err := db.Get("foo")
@@ -32,6 +32,12 @@ func TestGenesis(t *testing.T) {
 	assert.NoError(err)
 	m := kv.NewMap(db.noms)
 	assert.True(db.head.Original.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0).Original))
+
+	cid := db.clientID
+	assert.NotEqual("", cid)
+
+	db = reloadDB(assert, dir)
+	assert.Equal(cid, db.clientID)
 }
 
 func TestData(t *testing.T) {
