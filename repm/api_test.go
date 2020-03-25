@@ -19,7 +19,6 @@ import (
 func TestBasics(t *testing.T) {
 	defer deinit()
 	defer time.SetFake()()
-	defer fakeUUID()()
 
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")

@@ -23,7 +23,6 @@ func mm(assert *assert.Assertions, in interface{}) []byte {
 func TestLog(t *testing.T) {
 	defer deinit()
 	defer time.SetFake()()
-	defer fakeUUID()()
 
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")
@@ -37,7 +36,6 @@ func TestLog(t *testing.T) {
 func TestBasic(t *testing.T) {
 	defer deinit()
 	defer time.SetFake()()
-	defer fakeUUID()()
 
 	assert := assert.New(t)
 	dir, err := ioutil.TempDir("", "")
