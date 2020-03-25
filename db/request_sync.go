@@ -51,6 +51,7 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 }
 
 const sandboxAccountID = "sandbox"
+const clientViewUserID = "42"
 const fakeClientID = "fake-client-id"
 
 // RequestSync pulls new server state from the client side.
@@ -62,10 +63,10 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	url := fmt.Sprintf("%s/pull", remote.String())
 	// TODO test walking backwards works
 	pullReq, err := json.Marshal(servetypes.PullRequest{
-		AccountID:   sandboxAccountID, // TODO expose this in the constructor so clients can set it
-		ClientID:    fakeClientID,     // TODO hook this up to the client id generation code
-		BaseStateID: genesis.Meta.Genesis.ServerStateID,
-		Checksum:    string(genesis.Value.Checksum),
+		ClientViewAuth: clientViewUserID, // TODO hook this up to the client so it can specify
+		ClientID:       fakeClientID,     // TODO hook this up to the client id generation code
+		BaseStateID:    genesis.Meta.Genesis.ServerStateID,
+		Checksum:       string(genesis.Value.Checksum),
 	})
 	verbose.Log("Pulling: %s from baseStateID %s", url, genesis.Meta.Genesis.ServerStateID)
 	chk.NoError(err)
@@ -74,7 +75,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Authorization", remote.Options.Authorization)
+	req.Header.Add("Authorization", sandboxAccountID) // TODO expose this in the constructor so clients can set it
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
