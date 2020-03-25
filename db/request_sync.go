@@ -51,7 +51,7 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 }
 
 const sandboxAccountID = "sandbox"
-const fakeClientID = "TODO fake client id"
+const fakeClientID = "fake-client-id"
 
 // RequestSync pulls new server state from the client side.
 func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
@@ -59,7 +59,7 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	if err != nil {
 		return err
 	}
-	url := fmt.Sprintf("%s/handlePull", remote.String())
+	url := fmt.Sprintf("%s/pull", remote.String())
 	// TODO test walking backwards works
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		AccountID:   sandboxAccountID, // TODO expose this in the constructor so clients can set it
