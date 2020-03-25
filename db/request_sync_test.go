@@ -78,7 +78,7 @@ func TestRequestSync(t *testing.T) {
 			true,
 			http.StatusOK,
 			``,
-			`Post "?http://127.0.0.1:\d+/handlePull"?: dial tcp 127.0.0.1:\d+: connect: connection refused`,
+			`Post "?http://127.0.0.1:\d+/pull"?: dial tcp 127.0.0.1:\d+: connect: connection refused`,
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
@@ -104,7 +104,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			http.StatusOK,
 			"this isn't valid json!",
-			`Response from http://127.0.0.1:\d+/handlePull is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
+			`Response from http://127.0.0.1:\d+/pull is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
@@ -117,7 +117,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			http.StatusOK,
 			"",
-			`Response from http://127.0.0.1:\d+/handlePull is not valid JSON: EOF`,
+			`Response from http://127.0.0.1:\d+/pull is not valid JSON: EOF`,
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
@@ -339,7 +339,7 @@ func TestProgress(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
 		err = db.RequestSync(sp, progress)
-		assert.Regexp(`Response from http://[\d\.\:]+/handlePull is not valid JSON`, err)
+		assert.Regexp(`Response from http://[\d\.\:]+/pull is not valid JSON`, err)
 
 		expected := []report{}
 		if t.hasProgressHandler {
