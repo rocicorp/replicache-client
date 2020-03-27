@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,6 +34,11 @@ func TestLog(t *testing.T) {
 
 	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+`, string(buf.Bytes()))
 }
+
+func s(b []byte) string {
+	return strings.TrimRight(string(b), "\n")
+}
+
 func TestBasic(t *testing.T) {
 	defer deinit()
 	defer time.SetFake()()
@@ -45,12 +51,12 @@ func TestBasic(t *testing.T) {
 	assert.Nil(res)
 	assert.NoError(err)
 	resp, err := Dispatch("db1", "put", []byte(`{"id": "foo", "value": "bar"}`))
-	assert.Equal(`{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, string(resp))
+	assert.Equal(`{"root":"j2dit11n1sdrjtqr00ofcvd4393h93e3"}`, s(resp))
 	assert.NoError(err)
 	resp, err = Dispatch("db1", "get", []byte(`{"id": "foo"}`))
 	assert.Equal(`{"has":true,"value":"bar"}`, string(resp))
 	resp, err = Dispatch("db1", "del", []byte(`{"id": "foo"}`))
-	assert.Equal(`{"ok":true,"root":"hq8ulq2iptn2lujqc90oqc68f9j634mp"}`, string(resp))
+	assert.Equal(`{"ok":true,"root":"idtqpp88sudu6ia3smhom6k5s0lm0bsr"}`, s(resp))
 	testFile, err := ioutil.TempFile(connections["db1"].dir, "")
 	assert.NoError(err)
 

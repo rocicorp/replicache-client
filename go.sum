@@ -127,5 +127,5 @@ gopkg.in/yaml.v2 v2.2.1 h1:mUhvW9EsL+naU5Q3cakzfE91YhliOondGd6ZrsDBHQE=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-roci.dev/diff-server v0.0.0-20200325163831-0d98d435683b h1:UCpFFcCjqGIYsq/yYWXBvPKgKIUIYIz7Zi1Vx1D7eik=
-roci.dev/diff-server v0.0.0-20200325163831-0d98d435683b/go.mod h1:djPiksDlpN9iCLn/mXeX2uMQko3A2UFONKyIBFm+P/0=
+roci.dev/diff-server v0.0.0-20200327154646-77501086ee79 h1:1hgwPP+1UJCYuEPkbetPLJjxEdYZGcB0x4Z63aexR2A=
+roci.dev/diff-server v0.0.0-20200327154646-77501086ee79/go.mod h1:djPiksDlpN9iCLn/mXeX2uMQko3A2UFONKyIBFm+P/0=
