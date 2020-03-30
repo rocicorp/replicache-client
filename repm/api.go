@@ -144,7 +144,7 @@ func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 	req.Remote.Options.Authorization = req.Auth
 
 	res := SyncResponse{}
-	err = conn.db.RequestSync(req.Remote.Spec, func(received, expected uint64) {
+	err = conn.db.RequestSync(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
 		conn.sp = syncProgress{
 			bytesReceived: received,
 			bytesExpected: expected,

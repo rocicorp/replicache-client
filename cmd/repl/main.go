@@ -269,6 +269,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 func sync(parent *kingpin.Application, gdb gdb) {
 	kc := parent.Command("sync", "Sync with a this client server.")
 	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
+	clientViewAuth := kc.Arg("client-view-auth", "Client view authorization sent to the data layer.").Default("").String()
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		db, err := gdb()
@@ -277,7 +278,7 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		}
 
 		// TODO: progress
-		return db.RequestSync(*remoteSpec, nil)
+		return db.RequestSync(*remoteSpec, *clientViewAuth, nil)
 	})
 }
 

@@ -220,14 +220,16 @@ func TestRequestSync(t *testing.T) {
 		err = db.Reload()
 		assert.NoError(err, t.label)
 
+		clientViewAuth := "t123"
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqBody servetypes.PullRequest
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
-			assert.Equal(sandboxAccountID, r.Header.Get("Authorization"))
+			assert.Equal("sandbox", r.Header.Get("Authorization"))
 			assert.NotEqual("", reqBody.ClientID)
-			assert.Equal(reqBody.ClientID, reqBody.ClientViewAuth)
+			assert.Equal(clientViewAuth, reqBody.ClientViewAuth)
 			w.WriteHeader(t.respCode)
 			w.Write([]byte(t.respBody))
 		}))
@@ -239,7 +241,7 @@ func TestRequestSync(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, t.label)
 
-		err = db.RequestSync(sp, nil)
+		err = db.RequestSync(sp, clientViewAuth, nil)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 		} else {
@@ -337,9 +339,10 @@ func TestProgress(t *testing.T) {
 			}
 		}))
 
+		clientViewAuth := "test-2"
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
-		err = db.RequestSync(sp, progress)
+		err = db.RequestSync(sp, clientViewAuth, progress)
 		assert.Regexp(`Response from http://[\d\.\:]+/pull is not valid JSON`, err)
 
 		expected := []report{}

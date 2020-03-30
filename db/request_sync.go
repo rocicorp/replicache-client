@@ -50,10 +50,10 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	return Commit{}, fmt.Errorf("could not find genesis of %v", c)
 }
 
-const sandboxAccountID = "sandbox"
+const sandboxAuthorization = "sandbox"
 
 // RequestSync pulls new server state from the client side.
-func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
+func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Progress) error {
 	genesis, err := findGenesis(db.noms, db.head)
 	if err != nil {
 		return err
@@ -61,19 +61,20 @@ func (db *DB) RequestSync(remote spec.Spec, progress Progress) error {
 	url := fmt.Sprintf("%s/pull", remote.String())
 	// TODO test walking backwards works
 	pullReq, err := json.Marshal(servetypes.PullRequest{
-		ClientViewAuth: db.clientID,
+		ClientViewAuth: clientViewAuth,
 		ClientID:       db.clientID,
 		BaseStateID:    genesis.Meta.Genesis.ServerStateID,
 		Checksum:       string(genesis.Value.Checksum),
 	})
 	verbose.Log("Pulling: %s from baseStateID %s", url, genesis.Meta.Genesis.ServerStateID)
+	verbose.Log("Pulling: clientViewAuth: %s", clientViewAuth)
 	chk.NoError(err)
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(pullReq))
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Authorization", sandboxAccountID) // TODO expose this in the constructor so clients can set it
+	req.Header.Add("Authorization", sandboxAuthorization) // TODO expose this in the constructor so clients can set it
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
