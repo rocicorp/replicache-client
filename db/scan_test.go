@@ -22,7 +22,7 @@ func TestScan(t *testing.T) {
 		assert.NoError(err)
 	}
 
-	put("")
+	put("0")
 	put("a")
 	put("ba")
 	put("bb")
@@ -38,9 +38,9 @@ func TestScan(t *testing.T) {
 		expectedError error
 	}{
 		// no options
-		{ScanOptions{}, []string{"", "a", "ba", "bb"}, nil},
-		{ScanOptions{Start: &ScanBound{}}, []string{"", "a", "ba", "bb"}, nil},
-		{ScanOptions{Start: &ScanBound{ID: &ScanID{}}}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{}, []string{"0", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{}}, []string{"0", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{ID: &ScanID{}}}, []string{"0", "a", "ba", "bb"}, nil},
 
 		// prefix alone
 		{ScanOptions{Prefix: "a"}, []string{"a"}, nil},
@@ -67,7 +67,7 @@ func TestScan(t *testing.T) {
 		{ScanOptions{Prefix: "a", Start: &ScanBound{ID: &ScanID{Value: "c"}}}, []string{}, nil},
 
 		// start.index alone
-		{ScanOptions{Start: &ScanBound{Index: index(0)}}, []string{"", "a", "ba", "bb"}, nil},
+		{ScanOptions{Start: &ScanBound{Index: index(0)}}, []string{"0", "a", "ba", "bb"}, nil},
 		{ScanOptions{Start: &ScanBound{Index: index(1)}}, []string{"a", "ba", "bb"}, nil},
 		{ScanOptions{Start: &ScanBound{Index: index(1)}, Limit: 2}, []string{"a", "ba"}, nil},
 		{ScanOptions{Start: &ScanBound{Index: index(4)}}, []string{}, nil},
