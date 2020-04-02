@@ -25,7 +25,7 @@ this library and handle API changes when they update.
 ```
 go tag v<newsemver>
 go push <vnewsemver> origin
-./release.sh
+./tool/release.sh
 # Github automatically shows the new tag at https://github.com/rocicorp/replicache-client/releases
 # Edit that release, add a description, and upload the objects
 ```
