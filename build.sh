@@ -25,7 +25,6 @@ mkdir build
 cd build
 gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPL_VERSION" --target=ios ../repm/
 gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPL_VERSION" --target=android ../repm/
-tar -czvf Repm.framework.tar.gz Repm.framework
 
 export GO111MODULE=
 
