@@ -125,7 +125,6 @@ func TestProgress(t *testing.T) {
 	assert.NoError(err)
 	req := SyncRequest{
 		Remote:  jsnoms.Spec{sp},
-		Shallow: true,
 	}
 
 	_, err = Dispatch("db1", "requestSync", mustMarshal(req))

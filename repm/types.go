@@ -67,10 +67,6 @@ type SyncRequest struct {
 	Remote         jsnoms.Spec `json:"remote"`
 	ClientViewAuth string      `json:"clientViewAuth"`
 	Auth           string      `json:"auth,omitempty"`
-
-	// Shallow causes only the head of the remote server to be downloaded, not all of its history.
-	// Currently this is incompatible with bidirectional sync.
-	Shallow bool `json:"shallow,omitempty"`
 }
 
 type SyncResponseError struct {
