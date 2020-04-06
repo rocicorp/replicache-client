@@ -407,7 +407,7 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				return err
 			}
 
-			err = diff.PrintDiff(out, basis.Data(d.Noms()), c.Data(d.Noms()), false)
+			err = diff.PrintDiff(out, basis.Data(d.Noms()).NomsMap(), c.Data(d.Noms()).NomsMap(), false)
 			if err != nil {
 				return err
 			}

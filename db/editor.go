@@ -4,6 +4,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 )
 
+// TODO fritz remove once scan functionality moves into kv.
 type editor struct {
 	noms types.ValueReadWriter
 	data *types.MapEditor

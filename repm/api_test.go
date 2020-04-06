@@ -50,8 +50,8 @@ func TestBasics(t *testing.T) {
 		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""}, // getRoot when db didn't change
 		{"put", `{"id": "foo"}`, ``, "value field is required"},
 		{"put", `{"id": "foo", "value": null}`, ``, "value field is required"},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"j2dit11n1sdrjtqr00ofcvd4393h93e3"}`, ""},
-		{"getRoot", `{}`, `{"root":"j2dit11n1sdrjtqr00ofcvd4393h93e3"}`, ""}, // getRoot when db did change
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, ""},
+		{"getRoot", `{}`, `{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, ""}, // getRoot when db did change
 
 		// has
 		{"has", invalidRequest, ``, invalidRequestError},
@@ -62,7 +62,7 @@ func TestBasics(t *testing.T) {
 		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
 
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"b81gg45tv389c5cjujur13h96sj03ddg"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"q05io6idqml885dv4paq3eb1vc6ndo3s"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},

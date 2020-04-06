@@ -8,6 +8,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 
+	"roci.dev/diff-server/kv"
 	"roci.dev/diff-server/util/chk"
 	"roci.dev/diff-server/util/noms/union"
 )
@@ -116,8 +117,9 @@ func (c Commit) Ref() types.Ref {
 	return types.NewRef(c.Original)
 }
 
-func (c Commit) Data(noms types.ValueReadWriter) types.Map {
-	return c.Value.Data.TargetValue(noms).(types.Map)
+func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
+	return kv.FromNoms(noms, c.Value.Data.TargetValue(noms).(types.Map),
+		kv.MustChecksumFromString(string(c.Value.Checksum)))
 }
 
 func (c Commit) Type() CommitType {

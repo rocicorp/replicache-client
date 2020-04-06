@@ -71,7 +71,7 @@ func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
-		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), uint64(0) /*lastMutationID*/)
+		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), uint64(0) /*lastMutationID*/)
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -111,7 +111,7 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 	if !ds.HasHead() {
 		// TODO: maybe setup the remote head at startup too.
 		m := kv.NewMap(db.noms)
-		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0), nil
+		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0), nil
 
 	}
 	err = marshal.Unmarshal(ds.Head(), &c)
@@ -123,12 +123,11 @@ func (db *DB) Hash() hash.Hash {
 }
 
 func (db *DB) Has(id string) (bool, error) {
-	// TODO fritz convert once map has has. doh.
-	return db.head.Data(db.noms).Has(types.String(id)), nil
+	return db.head.Data(db.noms).Has(id), nil
 }
 
 func (db *DB) Get(id string) (types.Value, error) {
-	vbytes, err := kv.NewMapFromNoms(db.noms, db.head.Data(db.noms)).Get(id)
+	vbytes, err := db.head.Data(db.noms).Get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -232,36 +231,36 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 		case ".putValue":
 			k := args.Get(uint64(0))
 			v := args.Get(uint64(1))
-			ed := kv.NewMapFromNoms(db.noms, basisCommit.Data(db.noms)).Edit()
+			ed := basisCommit.Data(db.noms).Edit()
 			isWrite = true
 			var b bytes.Buffer
 			err = nomsjson.ToJSON(v, &b)
 			if err != nil {
 				return
 			}
+			// TODO fritz clean up here and friends
 			err = ed.Set(string(k.(types.String)), b.Bytes())
 			if err != nil {
 				return
 			}
 			newMap := ed.Build()
-			newDataChecksum = types.String(newMap.Checksum().String())
+			newDataChecksum = newMap.NomsChecksum()
 			newData = db.noms.WriteValue(newMap.NomsMap())
 			break
 		case ".delValue":
 			k := args.Get(uint64(0))
-			nm := basisCommit.Data(db.noms)
-			m := kv.NewMapFromNoms(db.noms, nm)
+			m := basisCommit.Data(db.noms)
 			ed := m.Edit()
 			isWrite = true
-			// TODO fritz fix this, editor needs has
-			ok := nm.Has(k)
+			// TODO fritz clean up
+			ok := ed.Has(string(k.(types.String)))
 			err = ed.Remove(string(k.(types.String)))
 			if err != nil {
 				return
 			}
 			newMap := ed.Build()
 			newData = db.noms.WriteValue(newMap.NomsMap())
-			newDataChecksum = types.String(newMap.Checksum().String())
+			newDataChecksum = newMap.NomsChecksum()
 			output = types.Bool(ok)
 			break
 		}

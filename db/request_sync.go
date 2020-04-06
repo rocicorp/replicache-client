@@ -140,7 +140,7 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
-	patchedMap, err := kv.ApplyPatch(kv.NewMapFromNoms(db.noms, genesis.Data(db.noms)), pullResp.Patch)
+	patchedMap, err := kv.ApplyPatch(genesis.Data(db.noms), pullResp.Patch)
 	if err != nil {
 		return errors.Wrap(err, "couldnt apply patch")
 	}
@@ -148,10 +148,10 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 	if err != nil {
 		return errors.Wrapf(err, "response checksum malformed: %s", pullResp.Checksum)
 	}
-	if !patchedMap.Checksum().Equal(*expectedChecksum) {
-		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum.String(), patchedMap.Checksum().String())
+	if patchedMap.Checksum() != expectedChecksum.String() {
+		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum, patchedMap.Checksum())
 	}
-	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), types.String(patchedMap.Checksum().String()), pullResp.LastMutationID)
+	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), patchedMap.NomsChecksum(), pullResp.LastMutationID)
 	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
 	return db.init()
 }

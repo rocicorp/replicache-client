@@ -10,7 +10,6 @@ import (
 
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -51,7 +50,7 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"7d4a87ba","lastMutationID":1}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d","lastMutationID":1}`,
 			"",
 			false,
 			map[string]string{"foo": `"bar"`},
@@ -64,7 +63,7 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"7d4a87ba","lastMutationID":2}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2}`,
 			"",
 			false,
 			map[string]string{"foo": `"bar"`},
@@ -129,7 +128,7 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"7359d602","lastMutationID":2}`,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"0c3e8305","lastMutationID":2}`,
 			"",
 			false,
 			map[string]string{"foo": `"baz"`},
@@ -156,7 +155,7 @@ func TestRequestSync(t *testing.T) {
 			false,
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
-			"couldnt apply patch: EOF",
+			"couldnt apply patch: couldnt parse value '' as json",
 			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
@@ -214,7 +213,7 @@ func TestRequestSync(t *testing.T) {
 			}
 		}
 		m := ed.Build()
-		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), types.String(m.Checksum().String()), 0 /*lastMutationID*/)
+		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, g)))
 		assert.NoError(err)
 		err = db.Reload()
@@ -257,7 +256,7 @@ func TestRequestSync(t *testing.T) {
 		expected := ee.Build()
 		gotChecksum, err := kv.ChecksumFromString(string(db.head.Value.Checksum))
 		assert.NoError(err)
-		assert.True(expected.Checksum().Equal(*gotChecksum), t.label)
+		assert.Equal(expected.Checksum(), gotChecksum.String(), t.label)
 
 		if t.expectedError == "" {
 			assert.Equal(t.expectedBaseServerStateID, db.head.Meta.Genesis.ServerStateID, t.label)

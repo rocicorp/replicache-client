@@ -42,7 +42,7 @@ func TestRebase(t *testing.T) {
 		if c1.Original.Equals(c2.Original) {
 			return
 		}
-		fmt.Println(kv.NewMapFromNoms(noms, c1.Data(noms)).DebugString(), kv.NewMapFromNoms(noms, c2.Data(noms)).DebugString())
+		fmt.Println(c1.Data(noms).DebugString(), c2.Data(noms).DebugString())
 		fmt.Println(c1.Original.Hash(), c2.Original.Hash())
 		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.Original.Hash(), c2.Original.Hash(), diff.Diff(c1.Original, c2.Original))
 	}
@@ -52,27 +52,27 @@ func TestRebase(t *testing.T) {
 
 	tx := func(basis Commit, arg string, ds string) Commit {
 		d := data(ds)
-		m := kv.NewMapFromNoms(db.noms, d)
+		m := kv.FromNoms(db.noms, d, kv.ComputeChecksum(d))
 		r := makeTx(
 			noms,
 			basis.Ref(),
 			epoch,
-			".putValue",                                             // function
-			list("foo", arg),                                        // args
-			write(m.NomsMap()), types.String(m.Checksum().String())) // result data
+			".putValue",                          // function
+			list("foo", arg),                     // args
+			write(m.NomsMap()), m.NomsChecksum()) // result data
 		write(r.Original)
 		return r
 	}
 
 	ro := func(basis, subject Commit, ds string) Commit {
 		d := data(ds)
-		m := kv.NewMapFromNoms(db.noms, d)
+		m := kv.FromNoms(db.noms, d, kv.ComputeChecksum(d))
 		r := makeReorder(
 			noms,
 			basis.Ref(),
 			epoch,
 			subject.Ref(),
-			write(m.NomsMap()), types.String(m.Checksum().String())) // result data
+			write(m.NomsMap()), m.NomsChecksum()) // result data
 		write(r.Original)
 		return r
 	}

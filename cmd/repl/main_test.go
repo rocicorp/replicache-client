@@ -67,7 +67,7 @@ func TestCommands(t *testing.T) {
 			"",
 			"log --no-pager",
 			0,
-			"commit j2dit11n1sdrjtqr00ofcvd4393h93e3\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n",
+			"commit 0msppp2die542he6b4udelpe165gh1i2\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n",
 			"",
 		},
 		{

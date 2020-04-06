@@ -8,7 +8,7 @@ require (
 	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.5.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200331225319-f0bebcb76804
+	roci.dev/diff-server v0.0.0-20200404001305-48dd56052f39
 )

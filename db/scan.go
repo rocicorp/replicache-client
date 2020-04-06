@@ -36,7 +36,8 @@ type ScanItem struct {
 }
 
 func (db *DB) Scan(opts ScanOptions) ([]ScanItem, error) {
-	return scan(db.head.Data(db.noms), opts)
+	// TODO fritz clean up
+	return scan(db.head.Data(db.noms).NomsMap(), opts)
 }
 
 func scan(data types.Map, opts ScanOptions) ([]ScanItem, error) {
