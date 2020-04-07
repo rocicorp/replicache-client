@@ -64,6 +64,7 @@ func New(noms datas.Database) (*DB, error) {
 
 func (db *DB) init() error {
 	cid, err := initClientID(db.noms)
+	log.Printf("ClientID: %s", cid)
 	if err != nil {
 		return err
 	}

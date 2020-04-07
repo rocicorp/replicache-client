@@ -185,7 +185,7 @@ func open(dbName string) error {
 
 	p := dbPath(repDir, dbName)
 	log.Printf("Opening Replicache database '%s' at '%s'", dbName, p)
-	log.Println("Using tempdir: ", os.TempDir())
+	log.Printf("Using tempdir: %s", os.TempDir())
 	sp, err := spec.ForDatabase(p)
 	if err != nil {
 		return err
