@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -211,7 +212,14 @@ func TestCommands(t *testing.T) {
 
 		assert.Equal(c.code, code, c.label)
 		assert.Equal(c.out, ob.String(), c.label)
-		assert.Equal(c.err, eb.String(), c.label)
+
+		ebs := eb.String()
+		re := regexp.MustCompile("ClientID: (.){22}\n")
+		if c.err == "" {
+			assert.Regexp(re, ebs)
+		}
+		ebs = re.ReplaceAllLiteralString(eb.String(), "")
+		assert.Equal(c.err, ebs, c.label)
 	}
 }
 
