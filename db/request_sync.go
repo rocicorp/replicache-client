@@ -52,8 +52,8 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 
 const sandboxAuthorization = "sandbox"
 
-// RequestSync pulls new server state from the client side.
-func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Progress) (servetypes.ClientViewInfo, error) {
+// Pull pulls new server state from the client side.
+func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (servetypes.ClientViewInfo, error) {
 	genesis, err := findGenesis(db.noms, db.head)
 	if err != nil {
 		return servetypes.ClientViewInfo{}, err

@@ -15,7 +15,7 @@ import (
 	servetypes "roci.dev/diff-server/serve/types"
 )
 
-func TestRequestSync(t *testing.T) {
+func TestPull(t *testing.T) {
 	assert := assert.New(t)
 
 	tc := []struct {
@@ -268,7 +268,7 @@ func TestRequestSync(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, t.label)
 
-		cvi, err := db.RequestSync(sp, clientViewAuth, nil)
+		cvi, err := db.Pull(sp, clientViewAuth, nil)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 		} else {
@@ -369,7 +369,7 @@ func TestProgress(t *testing.T) {
 		clientViewAuth := "test-2"
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
-		_, err = db.RequestSync(sp, clientViewAuth, progress)
+		_, err = db.Pull(sp, clientViewAuth, progress)
 		assert.Regexp(`Response from http://[\d\.\:]+/pull is not valid JSON`, err)
 
 		expected := []report{}

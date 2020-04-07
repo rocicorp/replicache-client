@@ -14,11 +14,11 @@ import (
 type connection struct {
 	dir     string
 	db      *db.DB
-	sp      syncProgress
-	syncing int32
+	sp      pullProgress
+	pulling int32
 }
 
-type syncProgress struct {
+type pullProgress struct {
 	bytesReceived uint64
 	bytesExpected uint64
 }
@@ -129,22 +129,22 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
-	var req SyncRequest
+func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
+	var req PullRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
 
-	if !atomic.CompareAndSwapInt32(&conn.syncing, 0, 1) {
-		return nil, errors.New("There is already a sync in progress")
+	if !atomic.CompareAndSwapInt32(&conn.pulling, 0, 1) {
+		return nil, errors.New("There is already a pull in progress")
 	}
 
-	defer chk.True(atomic.CompareAndSwapInt32(&conn.syncing, 1, 0), "UNEXPECTED STATE: Overlapping syncs somehow!")
+	defer chk.True(atomic.CompareAndSwapInt32(&conn.pulling, 1, 0), "UNEXPECTED STATE: Overlapping pulls somehow!")
 
-	res := SyncResponse{}
-	clientViewInfo, err := conn.db.RequestSync(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
-		conn.sp = syncProgress{
+	res := PullResponse{}
+	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
+		conn.sp = pullProgress{
 			bytesReceived: received,
 			bytesExpected: expected,
 		}
@@ -157,7 +157,7 @@ func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 	}
 
 	if clientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
-		res.Error = &SyncResponseError{
+		res.Error = &PullResponseError{
 			BadAuth: clientViewInfo.ErrorMessage,
 		}
 	}
@@ -165,13 +165,13 @@ func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) dispatchSyncProgress(reqBytes []byte) ([]byte, error) {
-	var req SyncProgressRequest
+func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
+	var req PullProgressRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	res := SyncProgressResponse{
+	res := PullProgressResponse{
 		BytesReceived: conn.sp.bytesReceived,
 		BytesExpected: conn.sp.bytesExpected,
 	}

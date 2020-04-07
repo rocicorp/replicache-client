@@ -115,10 +115,10 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return conn.dispatchPut(data)
 	case "del":
 		return conn.dispatchDel(data)
-	case "requestSync":
-		return conn.dispatchRequestSync(data)
-	case "syncProgress":
-		return conn.dispatchSyncProgress(data)
+	case "pull":
+		return conn.dispatchPull(data)
+	case "pullProgress":
+		return conn.dispatchPullProgress(data)
 	}
 	chk.Fail("Unsupported rpc name: %s", rpc)
 	return nil, nil
@@ -210,10 +210,6 @@ func close(dbName string) error {
 	}
 	delete(connections, dbName)
 	return nil
-}
-
-type dropRequest struct {
-	rootDir string `json:"rootDir"`
 }
 
 // Drop closes and deletes the specified local database. Remote replicas in the group are not affected.

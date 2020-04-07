@@ -94,9 +94,9 @@ func TestProgress(t *testing.T) {
 	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
 
 	getProgress := func() (received, expected uint64) {
-		buf, err := Dispatch("db1", "syncProgress", mustMarshal(SyncProgressRequest{}))
+		buf, err := Dispatch("db1", "pullProgress", mustMarshal(PullProgressRequest{}))
 		assert.NoError(err)
-		var resp SyncProgressResponse
+		var resp PullProgressResponse
 		err = json.Unmarshal(buf, &resp)
 		assert.NoError(err)
 		return resp.BytesReceived, resp.BytesExpected
@@ -123,10 +123,10 @@ func TestProgress(t *testing.T) {
 
 	sp, err := spec.ForDatabase(server.URL)
 	assert.NoError(err)
-	req := SyncRequest{
-		Remote:  jsnoms.Spec{sp},
+	req := PullRequest{
+		Remote: jsnoms.Spec{sp},
 	}
 
-	_, err = Dispatch("db1", "requestSync", mustMarshal(req))
+	_, err = Dispatch("db1", "pull", mustMarshal(req))
 	assert.Regexp(`is not valid JSON`, err.Error())
 }

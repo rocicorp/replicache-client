@@ -39,7 +39,7 @@ func (ed editor) Scan(opts ScanOptions) (r []ScanItem, err error) {
 	return
 }
 
-// This interface has to be in terms of values because sync is going to call it with values.
+// This interface has to be in terms of values because pull is going to call it with values.
 func (ed *editor) Put(id string, v types.Value) error {
 	ed.receivedMutAttempt = true
 	ed.data.Set(types.String(id), v)

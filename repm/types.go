@@ -63,24 +63,24 @@ type DelResponse struct {
 	Root jsnoms.Hash `json:"root"`
 }
 
-type SyncRequest struct {
+type PullRequest struct {
 	Remote         jsnoms.Spec `json:"remote"`
 	ClientViewAuth string      `json:"clientViewAuth"`
 }
 
-type SyncResponseError struct {
+type PullResponseError struct {
 	BadAuth string `json:"badAuth"`
 }
 
-type SyncResponse struct {
-	Error *SyncResponseError `json:"error,omitempty"`
+type PullResponse struct {
+	Error *PullResponseError `json:"error,omitempty"`
 	Root  jsnoms.Hash        `json:"root,omitempty"`
 }
 
-type SyncProgressRequest struct {
+type PullProgressRequest struct {
 }
 
-type SyncProgressResponse struct {
+type PullProgressResponse struct {
 	BytesReceived uint64 `json:"bytesReceived"`
 	BytesExpected uint64 `json:"bytesExpected"`
 }

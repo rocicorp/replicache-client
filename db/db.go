@@ -77,7 +77,7 @@ func (db *DB) init() error {
 	ds := db.noms.GetDataset(LOCAL_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
-		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), uint64(0) /*lastMutationID*/)
+		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
 		genRef := db.noms.WriteValue(genesis.Original)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
@@ -235,8 +235,8 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 	if strings.HasPrefix(function, ".") {
 		switch function {
 		case ".putValue":
-			k := args.Get(uint64(0))
-			v := args.Get(uint64(1))
+			k := args.Get(0)
+			v := args.Get(1)
 			ed := basisCommit.Data(db.noms).Edit()
 			isWrite = true
 			var b bytes.Buffer
