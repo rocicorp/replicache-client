@@ -3,6 +3,7 @@ package repm
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"sync/atomic"
 
 	"roci.dev/diff-server/util/chk"
@@ -141,29 +142,26 @@ func (conn *connection) dispatchRequestSync(reqBytes []byte) ([]byte, error) {
 
 	defer chk.True(atomic.CompareAndSwapInt32(&conn.syncing, 1, 0), "UNEXPECTED STATE: Overlapping syncs somehow!")
 
-	req.Remote.Options.Authorization = req.Auth
-
 	res := SyncResponse{}
-	err = conn.db.RequestSync(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
+	clientViewInfo, err := conn.db.RequestSync(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
 		conn.sp = syncProgress{
 			bytesReceived: received,
 			bytesExpected: expected,
 		}
 	})
-	if _, ok := err.(db.PullAuthError); ok {
-		res.Error = &SyncResponseError{
-			BadAuth: err.Error(),
-		}
-		err = nil
-	}
 	if err != nil {
 		return nil, err
 	}
-	if res.Error == nil {
-		res.Root = jsnoms.Hash{
-			Hash: conn.db.Hash(),
+	res.Root = jsnoms.Hash{
+		Hash: conn.db.Hash(),
+	}
+
+	if clientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
+		res.Error = &SyncResponseError{
+			BadAuth: clientViewInfo.ErrorMessage,
 		}
 	}
+
 	return mustMarshal(res), nil
 }
 

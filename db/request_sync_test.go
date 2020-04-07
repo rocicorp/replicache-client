@@ -19,17 +19,18 @@ func TestRequestSync(t *testing.T) {
 	assert := assert.New(t)
 
 	tc := []struct {
-		label                     string
-		initialState              map[string]string
-		initialStateID            string
-		reqError                  bool
-		respCode                  int
-		respBody                  string
-		expectedError             string
-		expectedErrorIsAuthError  bool
-		expectedData              map[string]string
-		expectedBaseServerStateID string
-		expectedLastMutationID    uint64
+		label                            string
+		initialState                     map[string]string
+		initialStateID                   string
+		reqError                         bool
+		respCode                         int
+		respBody                         string
+		expectedError                    string
+		expectedData                     map[string]string
+		expectedBaseServerStateID        string
+		expectedLastMutationID           uint64
+		expectedClientViewHTTPStatusCode int
+		expectedClientViewErrorMessage   string
 	}{
 		{
 			"ok-nop",
@@ -37,12 +38,13 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000","lastMutationID":1}`,
+			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000","lastMutationID":1,"clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			"",
-			false,
 			map[string]string{},
 			"11111111111111111111111111111111",
 			1,
+			200,
+			"",
 		},
 		{
 			"ok-no-basis",
@@ -50,12 +52,13 @@ func TestRequestSync(t *testing.T) {
 			"",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d","lastMutationID":1}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"11111111111111111111111111111111","checksum":"c4e7090d","lastMutationID":1,"clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			"",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			1,
+			200,
+			"",
 		},
 		{
 			"ok-with-basis",
@@ -63,12 +66,13 @@ func TestRequestSync(t *testing.T) {
 			"11111111111111111111111111111111",
 			false,
 			http.StatusOK,
-			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2}`,
+			`{"patch":[{"op":"add","path":"/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2,"clientViewInfo":{"httpStatusCode":200,"errorMessage":""}}`,
 			"",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"22222222222222222222222222222222",
 			2,
+			200,
+			"",
 		},
 		{
 			"network-error",
@@ -78,10 +82,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			``,
 			`Post "?http://127.0.0.1:\d+/pull"?: dial tcp 127.0.0.1:\d+: connect: connection refused`,
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"http-error",
@@ -91,10 +96,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusBadRequest,
 			"You have made an invalid request",
 			"400 Bad Request: You have made an invalid request",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"invalid-response",
@@ -104,10 +110,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			"this isn't valid json!",
 			`Response from http://127.0.0.1:\d+/pull is not valid JSON: invalid character 'h' in literal true \(expecting 'r'\)`,
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"empty-response",
@@ -117,10 +124,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			"",
 			`Response from http://127.0.0.1:\d+/pull is not valid JSON: EOF`,
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"nuke-first-patch",
@@ -130,10 +138,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"baz"}],"stateID":"22222222222222222222222222222222","checksum":"0c3e8305","lastMutationID":2}`,
 			"",
-			false,
 			map[string]string{"foo": `"baz"`},
 			"22222222222222222222222222222222",
 			2,
+			0,
+			"",
 		},
 		{
 			"invalid-patch-nuke-late-patch",
@@ -143,10 +152,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo","value":"baz"},{"op":"remove","path":""}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d"}`,
 			"couldnt apply patch",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"invalid-patch-bad-op",
@@ -156,10 +166,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
 			"couldnt apply patch: couldnt parse value '' as json",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"invalid-patch-bad-op",
@@ -169,10 +180,11 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"monkey"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
 			"couldnt apply patch: Invalid path",
-			false,
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"checksum-mismatch",
@@ -182,23 +194,39 @@ func TestRequestSync(t *testing.T) {
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/u/foo","value":"bar"}],"stateID":"22222222222222222222222222222222","checksum":"aaaaaaaa"},"lastMutationID":1`,
 			"Checksum mismatch!",
-			false,
 			map[string]string{},
 			"11111111111111111111111111111111",
 			0,
+			0,
+			"",
 		},
 		{
 			"auth-error",
 			map[string]string{},
 			"",
 			false,
-			http.StatusForbidden,
-			`Bad auth token`,
-			"Forbidden: Bad auth token",
-			true,
+			http.StatusNotImplemented,
+			`Response Body`,
+			"Not Implemented: Response Body",
 			map[string]string{},
 			"",
 			0,
+			0,
+			"",
+		},
+		{
+			"client-view-info",
+			map[string]string{},
+			"",
+			false,
+			http.StatusOK,
+			`{"patch":[],"stateID":"11111111111111111111111111111111","checksum":"00000000","lastMutationID":1,"clientViewInfo":{"httpStatusCode":234,"errorMessage":"Xyz"}}`,
+			"",
+			map[string]string{},
+			"11111111111111111111111111111111",
+			1,
+			234,
+			"Xyz",
 		},
 	}
 
@@ -240,14 +268,14 @@ func TestRequestSync(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, t.label)
 
-		err = db.RequestSync(sp, clientViewAuth, nil)
+		cvi, err := db.RequestSync(sp, clientViewAuth, nil)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 		} else {
 			assert.Regexp(t.expectedError, err.Error(), t.label)
-			_, ok := err.(PullAuthError)
-			assert.Equal(t.expectedErrorIsAuthError, ok, t.label)
 		}
+		assert.Equal(t.expectedClientViewHTTPStatusCode, cvi.HTTPStatusCode)
+		assert.Equal(t.expectedClientViewErrorMessage, cvi.ErrorMessage)
 
 		ee := kv.NewMap(db.noms).Edit()
 		for k, v := range t.expectedData {
@@ -341,7 +369,7 @@ func TestProgress(t *testing.T) {
 		clientViewAuth := "test-2"
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
-		err = db.RequestSync(sp, clientViewAuth, progress)
+		_, err = db.RequestSync(sp, clientViewAuth, progress)
 		assert.Regexp(`Response from http://[\d\.\:]+/pull is not valid JSON`, err)
 
 		expected := []report{}

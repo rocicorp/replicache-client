@@ -66,11 +66,10 @@ type DelResponse struct {
 type SyncRequest struct {
 	Remote         jsnoms.Spec `json:"remote"`
 	ClientViewAuth string      `json:"clientViewAuth"`
-	Auth           string      `json:"auth,omitempty"`
 }
 
 type SyncResponseError struct {
-	BadAuth string `json:"badAuth,omitempty"`
+	BadAuth string `json:"badAuth"`
 }
 
 type SyncResponse struct {

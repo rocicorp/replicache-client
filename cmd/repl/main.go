@@ -278,7 +278,8 @@ func sync(parent *kingpin.Application, gdb gdb) {
 		}
 
 		// TODO: progress
-		return db.RequestSync(*remoteSpec, *clientViewAuth, nil)
+		_, err = db.RequestSync(*remoteSpec, *clientViewAuth, nil)
+		return err
 	})
 }
 

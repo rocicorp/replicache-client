@@ -53,10 +53,10 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 const sandboxAuthorization = "sandbox"
 
 // RequestSync pulls new server state from the client side.
-func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Progress) error {
+func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Progress) (servetypes.ClientViewInfo, error) {
 	genesis, err := findGenesis(db.noms, db.head)
 	if err != nil {
-		return err
+		return servetypes.ClientViewInfo{}, err
 	}
 	url := fmt.Sprintf("%s/pull", remote.String())
 	// TODO test walking backwards works
@@ -72,12 +72,12 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(pullReq))
 	if err != nil {
-		return err
+		return servetypes.ClientViewInfo{}, err
 	}
 	req.Header.Add("Authorization", sandboxAuthorization) // TODO expose this in the constructor so clients can set it
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return servetypes.ClientViewInfo{}, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -88,14 +88,7 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 		} else {
 			s = err.Error()
 		}
-		err = fmt.Errorf("%s: %s", resp.Status, s)
-		if resp.StatusCode == http.StatusForbidden {
-			return PullAuthError{
-				err,
-			}
-		} else {
-			return err
-		}
+		return servetypes.ClientViewInfo{}, fmt.Errorf("%s: %s", resp.Status, s)
 	}
 
 	getExpectedLength := func() (r int64, err error) {
@@ -121,7 +114,7 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 		}
 		expected, err := getExpectedLength()
 		if err != nil {
-			return err
+			return servetypes.ClientViewInfo{}, err
 		}
 		cr.Callback = func() {
 			rec := cr.Count
@@ -137,21 +130,22 @@ func (db *DB) RequestSync(remote spec.Spec, clientViewAuth string, progress Prog
 	}
 	err = json.NewDecoder(r).Decode(&pullResp)
 	if err != nil {
-		return fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
+		return servetypes.ClientViewInfo{}, fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
 	patchedMap, err := kv.ApplyPatch(genesis.Data(db.noms), pullResp.Patch)
 	if err != nil {
-		return errors.Wrap(err, "couldnt apply patch")
+		return pullResp.ClientViewInfo, errors.Wrap(err, "couldnt apply patch")
 	}
 	expectedChecksum, err := kv.ChecksumFromString(pullResp.Checksum)
 	if err != nil {
-		return errors.Wrapf(err, "response checksum malformed: %s", pullResp.Checksum)
+		return pullResp.ClientViewInfo, errors.Wrapf(err, "response checksum malformed: %s", pullResp.Checksum)
 	}
 	if patchedMap.Checksum() != expectedChecksum.String() {
-		return fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum, patchedMap.Checksum())
+		return pullResp.ClientViewInfo, fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum, patchedMap.Checksum())
 	}
 	newHead := makeGenesis(db.noms, pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), patchedMap.NomsChecksum(), pullResp.LastMutationID)
 	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
-	return db.init()
+
+	return pullResp.ClientViewInfo, db.init()
 }
