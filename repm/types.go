@@ -4,6 +4,8 @@
 package repm
 
 import (
+	"encoding/json"
+
 	"roci.dev/replicache-client/db"
 
 	jsnoms "roci.dev/diff-server/util/noms/json"
@@ -29,8 +31,8 @@ type GetRequest struct {
 }
 
 type GetResponse struct {
-	Has   bool          `json:"has"`
-	Value *jsnoms.Value `json:"value,omitempty"`
+	Has   bool            `json:"has"`
+	Value json.RawMessage `json:"value,omitempty"`
 }
 
 type ScanRequest db.ScanOptions
@@ -46,8 +48,8 @@ type ScanResponse struct {
 }
 
 type PutRequest struct {
-	ID    string       `json:"id"`
-	Value jsnoms.Value `json:"value"`
+	ID    string          `json:"id"`
+	Value json.RawMessage `json:"value"`
 }
 
 type PutResponse struct {

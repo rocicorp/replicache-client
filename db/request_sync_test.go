@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 func TestPull(t *testing.T) {
@@ -165,7 +168,7 @@ func TestPull(t *testing.T) {
 			false,
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":1}`,
-			"couldnt apply patch: couldnt parse value '' as json",
+			"couldnt apply patch: couldnt parse value from JSON '': EOF",
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			0,
@@ -228,6 +231,20 @@ func TestPull(t *testing.T) {
 			234,
 			"Xyz",
 		},
+		{
+			"ensure-put-canonicalizes",
+			map[string]string{"foo": `"bar"`},
+			"11111111111111111111111111111111",
+			false,
+			http.StatusOK,
+			`{"patch":[{"op":"remove","path":"/"},{"op":"add","path":"/foo","value":"\u000b"}],"stateID":"22222222222222222222222222222222","checksum":"6206e20c","lastMutationID":2}`,
+			"",
+			map[string]string{"foo": `"\u000B"`}, // \u000B is canonical for \u000b which was returned
+			"22222222222222222222222222222222",
+			2,
+			0,
+			"",
+		},
 	}
 
 	for _, t := range tc {
@@ -237,7 +254,9 @@ func TestPull(t *testing.T) {
 		ed := kv.NewMap(db.noms).Edit()
 		if t.initialState != nil {
 			for k, v := range t.initialState {
-				assert.NoError(ed.Set(k, []byte(v)))
+				v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+				assert.NoError(err)
+				assert.NoError(ed.Set(types.String(k), v))
 			}
 		}
 		m := ed.Build()
@@ -279,7 +298,9 @@ func TestPull(t *testing.T) {
 
 		ee := kv.NewMap(db.noms).Edit()
 		for k, v := range t.expectedData {
-			assert.NoError(ee.Set(k, []byte(v)), t.label)
+			v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+			assert.NoError(err)
+			assert.NoError(ee.Set(types.String(k), v), t.label)
 		}
 		expected := ee.Build()
 		gotChecksum, err := kv.ChecksumFromString(string(db.head.Value.Checksum))

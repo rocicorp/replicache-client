@@ -76,8 +76,6 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 			return Commit{}, err
 		}
 
-	default:
-		return Commit{}, fmt.Errorf("Cannot rebase commit of type %s: %s: %s", commit.Type(), commit.Original.Hash(), types.EncodedValue(commit.Original))
 	}
 
 	// Create and return the reorder commit, which will become the basis for the prev frame of the recursive call.

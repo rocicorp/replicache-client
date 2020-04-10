@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"github.com/attic-labs/noms/go/diff"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
-	jn "github.com/attic-labs/noms/go/util/json"
 	"github.com/attic-labs/noms/go/util/outputpager"
 	"github.com/mgutz/ansi"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -197,7 +197,8 @@ func get(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if v == nil {
 			return nil
 		}
-		return jn.ToJSON(v, out, jn.ToOptions{Lists: true, Maps: true, Indent: "  "})
+		_, err = out.Write(v)
+		return err
 	})
 }
 
@@ -239,11 +240,11 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 		if err != nil {
 			return err
 		}
-		v, err := jn.FromJSON(in, db.Noms(), jn.FromOptions{})
-		if err != nil {
+		var v bytes.Buffer
+		if _, err := v.ReadFrom(in); err != nil {
 			return err
 		}
-		return db.Put(*id, v)
+		return db.Put(*id, v.Bytes())
 	})
 }
 

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +17,7 @@ func TestScan(t *testing.T) {
 	assert.NoError(err)
 
 	put := func(k string) {
-		err = d.Put(k, types.String(fmt.Sprintf("\"%s\"", k)))
+		err = d.Put(k, []byte(fmt.Sprintf("\"%s\"", k)))
 		assert.NoError(err)
 	}
 

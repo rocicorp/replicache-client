@@ -59,7 +59,6 @@ func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (
 		return servetypes.ClientViewInfo{}, err
 	}
 	url := fmt.Sprintf("%s/pull", remote.String())
-	// TODO test walking backwards works
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		ClientViewAuth: clientViewAuth,
 		ClientID:       db.clientID,
@@ -133,7 +132,7 @@ func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (
 		return servetypes.ClientViewInfo{}, fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
-	patchedMap, err := kv.ApplyPatch(genesis.Data(db.noms), pullResp.Patch)
+	patchedMap, err := kv.ApplyPatch(db.Noms(), genesis.Data(db.noms), pullResp.Patch)
 	if err != nil {
 		return pullResp.ClientViewInfo, errors.Wrap(err, "couldnt apply patch")
 	}

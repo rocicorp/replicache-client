@@ -69,7 +69,7 @@ func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
 		res.Has = false
 	} else {
 		res.Has = true
-		res.Value = jsnoms.New(conn.db.Noms(), v)
+		res.Value = v
 	}
 	return mustMarshal(res), nil
 }
@@ -88,17 +88,15 @@ func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
 }
 
 func (conn *connection) dispatchPut(reqBytes []byte) ([]byte, error) {
-	req := PutRequest{
-		Value: jsnoms.Make(conn.db.Noms(), nil),
-	}
+	var req PutRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	if req.Value.Value == nil {
+	if len(req.Value) == 0 {
 		return nil, errors.New("value field is required")
 	}
-	err = conn.db.Put(req.ID, req.Value.Value)
+	err = conn.db.Put(req.ID, req.Value)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 )
@@ -44,7 +43,7 @@ func TestData(t *testing.T) {
 	assert := assert.New(t)
 	db, dir := LoadTempDB(assert)
 
-	exp := types.String("bar")
+	exp := []byte(`"bar"`)
 	err := db.Put("foo", exp)
 	assert.NoError(err)
 
@@ -58,7 +57,7 @@ func TestData(t *testing.T) {
 		assert.True(ok)
 		act, err := d.Get("foo")
 		assert.NoError(err)
-		assert.True(act.Equals(exp), "expected %s got %s", exp, act)
+		assert.Equal(exp, act, "expected %s got %s", exp, act)
 
 		ok, err = d.Has("bar")
 		assert.NoError(err)
@@ -77,7 +76,7 @@ func TestDel(t *testing.T) {
 	db, err := Load(sp)
 	assert.NoError(err)
 
-	err = db.Put("foo", types.String("bar"))
+	err = db.Put("foo", []byte(`"bar"`))
 	assert.NoError(err)
 
 	ok, err := db.Has("foo")

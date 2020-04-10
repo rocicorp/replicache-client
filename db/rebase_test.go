@@ -31,11 +31,12 @@ func TestRebase(t *testing.T) {
 		return noms.WriteValue(v)
 	}
 
-	data := func(ds string) types.Map {
+	data := func(ds string) kv.Map {
 		if ds == "" {
-			return types.NewMap(noms)
+			return kv.NewMap(noms)
 		}
-		return types.NewMap(noms, types.String("foo"), types.String(ds))
+		nm := types.NewMap(noms, types.String("foo"), types.String(ds))
+		return kv.FromNoms(noms, nm, kv.ComputeChecksum(nm))
 	}
 
 	assertEqual := func(c1, c2 Commit) {
@@ -51,8 +52,7 @@ func TestRebase(t *testing.T) {
 	epoch := datetime.DateTime{}
 
 	tx := func(basis Commit, arg string, ds string) Commit {
-		d := data(ds)
-		m := kv.FromNoms(db.noms, d, kv.ComputeChecksum(d))
+		m := data(ds)
 		r := makeTx(
 			noms,
 			basis.Ref(),
@@ -65,8 +65,7 @@ func TestRebase(t *testing.T) {
 	}
 
 	ro := func(basis, subject Commit, ds string) Commit {
-		d := data(ds)
-		m := kv.FromNoms(db.noms, d, kv.ComputeChecksum(d))
+		m := data(ds)
 		r := makeReorder(
 			noms,
 			basis.Ref(),

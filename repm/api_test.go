@@ -48,10 +48,11 @@ func TestBasics(t *testing.T) {
 		// put
 		{"put", invalidRequest, ``, invalidRequestError},
 		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""}, // getRoot when db didn't change
-		{"put", `{"id": "foo"}`, ``, "value field is required"},
-		{"put", `{"id": "foo", "value": null}`, ``, "value field is required"},
 		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, ""},
-		{"getRoot", `{}`, `{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, ""}, // getRoot when db did change
+		{"put", `{"id": "foo"}`, ``, "value field is required"},
+		{"put", `{"id": "foo", "value": null}`, `{"root":"jsi6q9qc1fhcg91skdgpirfgkotcuu0o"}`, ""},
+		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"80744gunjjnad4e5pb8gkf8ntjcj02ca"}`, ""}, // so we can scan it
+		{"getRoot", `{}`, `{"root":"80744gunjjnad4e5pb8gkf8ntjcj02ca"}`, ""},                        // getRoot when db did change
 
 		// has
 		{"has", invalidRequest, ``, invalidRequestError},
@@ -62,7 +63,7 @@ func TestBasics(t *testing.T) {
 		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
 
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"q05io6idqml885dv4paq3eb1vc6ndo3s"}`, ""},
+		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"i3p2c676665as6vhcv5032bhtguci02s"}`, ""},
 		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},

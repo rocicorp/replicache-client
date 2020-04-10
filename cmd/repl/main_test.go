@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
-	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/util/time"
@@ -53,7 +52,7 @@ func TestCommands(t *testing.T) {
 			"put foo",
 			1,
 			"",
-			"EOF\n",
+			"could not Put 'foo'='': couldnt parse value '' as json: unexpected end of JSON input\n",
 		},
 		{
 			"put good",
@@ -100,7 +99,7 @@ func TestCommands(t *testing.T) {
 			"",
 			"get foo",
 			0,
-			"\"bar\"\n",
+			"\"bar\"",
 			"",
 		},
 		{
@@ -241,10 +240,10 @@ func TestDrop(t *testing.T) {
 
 	for i, t := range tc {
 		d, dir := db.LoadTempDB(assert)
-		d.Put("foo", types.String("bar"))
+		d.Put("foo", []byte(`"bar"`))
 		val, err := d.Get("foo")
 		assert.NoError(err)
-		assert.Equal("bar", string(val.(types.String)))
+		assert.Equal(`"bar"`, string(val))
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
 		args := append([]string{"--db=" + dir, "drop"})

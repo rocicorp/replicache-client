@@ -129,66 +129,38 @@ func (db *DB) Hash() hash.Hash {
 }
 
 func (db *DB) Has(id string) (bool, error) {
-	return db.head.Data(db.noms).Has(id), nil
+	return db.head.Data(db.noms).Has(types.String(id)), nil
 }
 
-func (db *DB) Get(id string) (types.Value, error) {
-	vbytes, err := db.head.Data(db.noms).Get(id)
-	if err != nil {
-		return nil, err
-	}
-	// If key doesn't exist, return nil.
-	if len(vbytes) == 0 {
+func (db *DB) Get(id string) ([]byte, error) {
+	value := db.head.Data(db.noms).Get(types.String(id))
+	if value == nil {
 		return nil, nil
 	}
-	// TODO fritz get rid of this round trip
-	return nomsjson.FromJSON(bytes.NewReader(vbytes), db.noms)
+	var b bytes.Buffer
+	err := nomsjson.ToJSON(value, &b)
+	return b.Bytes(), err
 }
 
-func (db *DB) Put(path string, v types.Value) error {
+func (db *DB) Put(path string, JSON []byte) error {
+	canonicalJSON, err := nomsjson.Canonicalize(JSON)
+	if err != nil {
+		return fmt.Errorf("could not Put '%s'='%s': %w", path, JSON, err)
+	}
+	value, err := nomsjson.FromJSON(bytes.NewReader(canonicalJSON), db.Noms())
+	if err != nil {
+		return fmt.Errorf("could not Put '%s'='%s': %w", path, JSON, err)
+	}
+
 	defer db.lock()()
-	_, err := db.execInternal(".putValue", types.NewList(db.noms, types.String(path), v))
+	_, err = db.execInternal(".putValue", types.NewList(db.Noms(), types.String(path), value))
 	return err
 }
 
 func (db *DB) Del(path string) (ok bool, err error) {
 	defer db.lock()()
-	v, err := db.execInternal(".delValue", types.NewList(db.noms, types.String(path)))
+	v, err := db.execInternal(".delValue", types.NewList(db.Noms(), types.String(path)))
 	return bool(v.(types.Bool)), err
-}
-
-// Exec executes a transaction against the database atomically.
-func (db *DB) Exec(function string, args types.List) (types.Value, error) {
-	defer db.lock()()
-	ds := db.noms.GetDataset(LOCAL_DATASET)
-	oldHead := ds.HeadRef()
-	basis := db.head
-	basisRef := basis.Ref()
-
-	if strings.HasPrefix(function, ".") {
-		return nil, fmt.Errorf("Cannot call system function: %s", function)
-	}
-	newData, checksum, output, isWrite, err := db.execImpl(basisRef, function, args)
-	if err != nil {
-		return nil, err
-	}
-
-	// Do not add commits for read-only transactions.
-	if isWrite {
-		basis = makeTx(db.noms, basisRef, time.DateTime(), function, args, newData, checksum)
-		basisRef = db.noms.WriteValue(basis.Original)
-	}
-
-	// FastForward not strictly needed here because we should have already ensured that we were
-	// fast-forwarding outside of Noms, but it's a nice sanity check.
-	newDS, err := db.noms.FastForward(ds, basisRef)
-	if err != nil {
-		db.noms.Flush()
-		log.Printf("Error committing exec - error: %s, old head: %s, attempted head: %s, current head: %s", err, oldHead.TargetHash(), basisRef.TargetHash(), newDS.Head().Hash())
-		return output, err
-	}
-	db.head = basis
-	return output, nil
 }
 
 func (db *DB) Reload() error {
@@ -235,33 +207,29 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 	if strings.HasPrefix(function, ".") {
 		switch function {
 		case ".putValue":
-			k := args.Get(0)
+			k := args.Get(0).(types.String)
 			v := args.Get(1)
 			ed := basisCommit.Data(db.noms).Edit()
 			isWrite = true
-			var b bytes.Buffer
-			err = nomsjson.ToJSON(v, &b)
+			err = ed.Set(k, v)
 			if err != nil {
-				return
-			}
-			// TODO fritz clean up here and friends
-			err = ed.Set(string(k.(types.String)), b.Bytes())
-			if err != nil {
+				err = fmt.Errorf("could not Put '%s'='%s': %w", k, v, err)
 				return
 			}
 			newMap := ed.Build()
 			newDataChecksum = newMap.NomsChecksum()
 			newData = db.noms.WriteValue(newMap.NomsMap())
 			break
+
 		case ".delValue":
-			k := args.Get(uint64(0))
+			k := args.Get(0).(types.String)
 			m := basisCommit.Data(db.noms)
 			ed := m.Edit()
 			isWrite = true
-			// TODO fritz clean up
-			ok := ed.Has(string(k.(types.String)))
-			err = ed.Remove(string(k.(types.String)))
+			ok := ed.Has(k)
+			err = ed.Remove(k)
 			if err != nil {
+				err = fmt.Errorf("could not Del '%s': %w", k, err)
 				return
 			}
 			newMap := ed.Build()
