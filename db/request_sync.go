@@ -132,6 +132,9 @@ func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (
 		return servetypes.ClientViewInfo{}, fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
 	}
 
+	if pullResp.LastMutationID < genesis.Meta.Genesis.LastMutationID {
+		return pullResp.ClientViewInfo, fmt.Errorf("Client view lastMutationID %d is < previous lastMutationID %d; ignoring", pullResp.LastMutationID, genesis.Meta.Genesis.LastMutationID)
+	}
 	patchedMap, err := kv.ApplyPatch(db.Noms(), genesis.Data(db.noms), pullResp.Patch)
 	if err != nil {
 		return pullResp.ClientViewInfo, errors.Wrap(err, "couldnt apply patch")
