@@ -25,8 +25,9 @@ func TestGenesis(t *testing.T) {
 
 	db, dir := LoadTempDB(assert)
 
-	assert.False(db.Has("foo"))
-	v, err := db.Get("foo")
+	tx := db.NewTransaction()
+	assert.False(tx.Has("foo"))
+	v, err := tx.Get("foo")
 	assert.Nil(v)
 	assert.NoError(err)
 	m := kv.NewMap(db.noms)
@@ -37,6 +38,8 @@ func TestGenesis(t *testing.T) {
 
 	db = reloadDB(assert, dir)
 	assert.Equal(cid, db.clientID)
+	err = tx.Close()
+	assert.NoError(err)
 }
 
 func TestData(t *testing.T) {
@@ -44,7 +47,10 @@ func TestData(t *testing.T) {
 	db, dir := LoadTempDB(assert)
 
 	exp := []byte(`"bar"`)
-	err := db.Put("foo", exp)
+	tx := db.NewTransaction()
+	err := tx.Put("foo", exp)
+	assert.NoError(err)
+	_, err = tx.Commit()
 	assert.NoError(err)
 
 	dbs := []*DB{
@@ -52,48 +58,25 @@ func TestData(t *testing.T) {
 	}
 
 	for _, d := range dbs {
-		ok, err := d.Has("foo")
+		tx := d.NewTransaction()
+		ok, err := tx.Has("foo")
 		assert.NoError(err)
 		assert.True(ok)
-		act, err := d.Get("foo")
+		act, err := tx.Get("foo")
 		assert.NoError(err)
 		assert.Equal(exp, act, "expected %s got %s", exp, act)
 
-		ok, err = d.Has("bar")
+		ok, err = tx.Has("bar")
 		assert.NoError(err)
 		assert.False(ok)
 
-		act, err = d.Get("bar")
+		act, err = tx.Get("bar")
 		assert.NoError(err)
 		assert.Nil(act)
+
+		err = tx.Close()
+		assert.NoError(err)
 	}
-}
-
-func TestDel(t *testing.T) {
-	assert := assert.New(t)
-	sp, err := spec.ForDatabase("mem")
-	assert.NoError(err)
-	db, err := Load(sp)
-	assert.NoError(err)
-
-	err = db.Put("foo", []byte(`"bar"`))
-	assert.NoError(err)
-
-	ok, err := db.Has("foo")
-	assert.NoError(err)
-	assert.True(ok)
-
-	ok, err = db.Del("foo")
-	assert.NoError(err)
-	assert.True(ok)
-
-	ok, err = db.Has("foo")
-	assert.NoError(err)
-	assert.False(ok)
-
-	ok, err = db.Del("foo")
-	assert.NoError(err)
-	assert.False(ok)
 }
 
 func TestLoadBadSpec(t *testing.T) {

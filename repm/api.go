@@ -3,7 +3,9 @@ package repm
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"sync"
 	"sync/atomic"
 
 	"roci.dev/diff-server/util/chk"
@@ -12,15 +14,41 @@ import (
 )
 
 type connection struct {
-	dir     string
-	db      *db.DB
-	sp      pullProgress
-	pulling int32
+	dir                string
+	db                 *db.DB
+	sp                 pullProgress
+	pulling            int32
+	transactions       map[int]*db.Transaction
+	transactionCounter int
+	transactionMutex   sync.RWMutex
+}
+
+func newConnection(d *db.DB, p string) *connection {
+	return &connection{db: d, dir: p, transactions: map[int]*db.Transaction{}, transactionCounter: 1}
 }
 
 type pullProgress struct {
 	bytesReceived uint64
 	bytesExpected uint64
+}
+
+func (conn *connection) findTransaction(txID int) (*db.Transaction, error) {
+	if txID == 0 {
+		return nil, fmt.Errorf("Missing transaction ID")
+	}
+	conn.transactionMutex.RLock()
+	defer conn.transactionMutex.RUnlock()
+
+	if tx, ok := conn.transactions[txID]; ok {
+		return tx, nil
+	}
+	return nil, fmt.Errorf("Invalid transaction ID: %d", txID)
+}
+
+func (conn *connection) removeTransaction(txID int) {
+	conn.transactionMutex.Lock()
+	defer conn.transactionMutex.Unlock()
+	delete(conn.transactions, txID)
 }
 
 func (conn *connection) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
@@ -44,7 +72,12 @@ func (conn *connection) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := conn.db.Has(req.ID)
+
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	ok, err := tx.Has(req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,14 +93,16 @@ func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, err := conn.db.Get(req.ID)
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	v, err := tx.Get(req.ID)
 	if err != nil {
 		return nil, err
 	}
 	res := GetResponse{}
-	if v == nil {
-		res.Has = false
-	} else {
+	if v != nil {
 		res.Has = true
 		res.Value = v
 	}
@@ -80,7 +115,11 @@ func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, err := conn.db.Scan(db.ScanOptions(req))
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	items, err := tx.Scan(db.ScanOptions(req.ScanOptions))
 	if err != nil {
 		return nil, err
 	}
@@ -96,33 +135,34 @@ func (conn *connection) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if len(req.Value) == 0 {
 		return nil, errors.New("value field is required")
 	}
-	err = conn.db.Put(req.ID, req.Value)
+	tx, err := conn.findTransaction(req.TransactionID)
 	if err != nil {
 		return nil, err
 	}
-	res := PutResponse{
-		Root: jsnoms.Hash{
-			Hash: conn.db.Hash(),
-		},
+	err = tx.Put(req.ID, req.Value)
+	if err != nil {
+		return nil, err
 	}
+	res := PutResponse{}
 	return mustMarshal(res), nil
 }
 
 func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
-	req := DelRequest{}
+	var req DelRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	ok, err := conn.db.Del(req.ID)
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	ok, err := tx.Del(req.ID)
 	if err != nil {
 		return nil, err
 	}
 	res := DelResponse{
 		Ok: ok,
-		Root: jsnoms.Hash{
-			Hash: conn.db.Hash(),
-		},
 	}
 	return mustMarshal(res), nil
 }
@@ -172,6 +212,73 @@ func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
 	res := PullProgressResponse{
 		BytesReceived: conn.sp.bytesReceived,
 		BytesExpected: conn.sp.bytesExpected,
+	}
+	return mustMarshal(res), nil
+}
+
+func (conn *connection) newTransaction() int {
+	conn.transactionMutex.Lock()
+	defer conn.transactionMutex.Unlock()
+	txID := conn.transactionCounter
+	conn.transactionCounter++
+	conn.transactions[txID] = conn.db.NewTransaction()
+	return txID
+}
+
+func (conn *connection) dispatchOpenTransaction(reqBytes []byte) ([]byte, error) {
+	var req openTransactionRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	txID := conn.newTransaction()
+
+	res := openTransactionResponse{
+		TransactionID: txID,
+	}
+	return mustMarshal(res), nil
+}
+
+func (conn *connection) dispatchCloseTransaction(reqBytes []byte) ([]byte, error) {
+	var req closeTransactionRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	conn.removeTransaction(req.TransactionID)
+	err = tx.Close()
+	if err != nil {
+		return nil, err
+	}
+	res := closeTransactionResponse{}
+	return mustMarshal(res), nil
+}
+
+func (conn *connection) dispatchCommitTransaction(reqBytes []byte) ([]byte, error) {
+	var req commitTransactionRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := conn.findTransaction(req.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+	conn.removeTransaction(req.TransactionID)
+	commitRef, err := tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	res := commitTransactionResponse{}
+	if !commitRef.IsZeroValue() {
+		res.Ref = &jsnoms.Hash{
+			Hash: commitRef.Hash(),
+		}
 	}
 	return mustMarshal(res), nil
 }

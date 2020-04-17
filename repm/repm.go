@@ -119,6 +119,12 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return conn.dispatchPull(data)
 	case "pullProgress":
 		return conn.dispatchPullProgress(data)
+	case "openTransaction":
+		return conn.dispatchOpenTransaction(data)
+	case "closeTransaction":
+		return conn.dispatchCloseTransaction(data)
+	case "commitTransaction":
+		return conn.dispatchCommitTransaction(data)
 	}
 	chk.Fail("Unsupported rpc name: %s", rpc)
 	return nil, nil
@@ -195,7 +201,7 @@ func open(dbName string) error {
 		return err
 	}
 
-	connections[dbName] = &connection{db: db, dir: p}
+	connections[dbName] = newConnection(db, p)
 	return nil
 }
 

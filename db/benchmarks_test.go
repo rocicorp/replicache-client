@@ -13,7 +13,10 @@ func BenchmarkPut(b *testing.B) {
 	db, dir := LoadTempDB(assert)
 	fmt.Println(dir)
 	for n := 0; n < b.N; n++ {
-		err := db.Put("foo", []byte(fmt.Sprintf("%f", types.Number(n))))
+		tx := db.NewTransaction()
+		err := tx.Put("foo", []byte(fmt.Sprintf("%f", types.Number(n))))
+		assert.NoError(err)
+		_, err = tx.Commit()
 		assert.NoError(err)
 	}
 }

@@ -19,6 +19,7 @@ type GetRootResponse struct {
 }
 
 type HasRequest struct {
+	transactionRequest
 	ID string `json:"id"`
 }
 
@@ -27,6 +28,7 @@ type HasResponse struct {
 }
 
 type GetRequest struct {
+	transactionRequest
 	ID string `json:"id"`
 }
 
@@ -35,7 +37,10 @@ type GetResponse struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
-type ScanRequest db.ScanOptions
+type ScanRequest struct {
+	transactionRequest
+	db.ScanOptions
+}
 
 type ScanItem struct {
 	ID    string       `json:"id"`
@@ -48,21 +53,20 @@ type ScanResponse struct {
 }
 
 type PutRequest struct {
+	transactionRequest
 	ID    string          `json:"id"`
 	Value json.RawMessage `json:"value"`
 }
 
-type PutResponse struct {
-	Root jsnoms.Hash `json:"root"`
-}
+type PutResponse struct{}
 
 type DelRequest struct {
+	transactionRequest
 	ID string `json:"id"`
 }
 
 type DelResponse struct {
-	Ok   bool        `json:"ok"`
-	Root jsnoms.Hash `json:"root"`
+	Ok bool `json:"ok"`
 }
 
 type PullRequest struct {
@@ -85,4 +89,26 @@ type PullProgressRequest struct {
 type PullProgressResponse struct {
 	BytesReceived uint64 `json:"bytesReceived"`
 	BytesExpected uint64 `json:"bytesExpected"`
+}
+
+type openTransactionRequest struct {
+}
+
+type openTransactionResponse struct {
+	TransactionID int `json:"transactionId"`
+}
+
+type transactionRequest struct {
+	TransactionID int `json:"transactionId"`
+}
+
+type closeTransactionRequest transactionRequest
+
+type closeTransactionResponse struct {
+}
+
+type commitTransactionRequest transactionRequest
+
+type commitTransactionResponse struct {
+	Ref *jsnoms.Hash `json:"ref,omitempty"`
 }

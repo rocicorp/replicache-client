@@ -2,7 +2,6 @@
 package db
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -17,7 +16,6 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/diff-server/kv"
-	nomsjson "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -128,41 +126,6 @@ func (db *DB) Hash() hash.Hash {
 	return db.head.Original.Hash()
 }
 
-func (db *DB) Has(id string) (bool, error) {
-	return db.head.Data(db.noms).Has(types.String(id)), nil
-}
-
-func (db *DB) Get(id string) ([]byte, error) {
-	value := db.head.Data(db.noms).Get(types.String(id))
-	if value == nil {
-		return nil, nil
-	}
-	var b bytes.Buffer
-	err := nomsjson.ToJSON(value, &b)
-	return b.Bytes(), err
-}
-
-func (db *DB) Put(path string, JSON []byte) error {
-	canonicalJSON, err := nomsjson.Canonicalize(JSON)
-	if err != nil {
-		return fmt.Errorf("could not Put '%s'='%s': %w", path, JSON, err)
-	}
-	value, err := nomsjson.FromJSON(bytes.NewReader(canonicalJSON), db.Noms())
-	if err != nil {
-		return fmt.Errorf("could not Put '%s'='%s': %w", path, JSON, err)
-	}
-
-	defer db.lock()()
-	_, err = db.execInternal(".putValue", types.NewList(db.Noms(), types.String(path), value))
-	return err
-}
-
-func (db *DB) Del(path string) (ok bool, err error) {
-	defer db.lock()()
-	v, err := db.execInternal(".delValue", types.NewList(db.Noms(), types.String(path)))
-	return bool(v.(types.Bool)), err
-}
-
 func (db *DB) Reload() error {
 	defer db.lock()()
 	db.noms.Rebase()
@@ -243,6 +206,28 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 	}
 
 	return newData, newDataChecksum, output, isWrite, nil
+}
+
+// NewTransaction returns a new Transaction.
+func (db *DB) NewTransaction() *Transaction {
+	return &Transaction{
+		db:   db,
+		head: db.head,
+		me:   db.head.Data(db.noms).Edit(),
+		args: types.NewList(db.noms),
+	}
+}
+
+// NewTransactionWithArgs creates a new transaction with a name and arguments.
+// The name and the arguments are used when replaying transactions.
+func (db *DB) NewTransactionWithArgs(name string, args types.List) *Transaction {
+	return &Transaction{
+		db:   db,
+		head: db.head,
+		me:   db.head.Data(db.noms).Edit(),
+		name: name,
+		args: args,
+	}
 }
 
 func (db *DB) lock() func() {

@@ -22,6 +22,9 @@ func TestCommands(t *testing.T) {
 	fmt.Println("test database:", td)
 	assert.NoError(err)
 
+	commitA := "commit 0msppp2die542he6b4udelpe165gh1i2\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n"
+	commitB := "commit hq8ulq2iptn2lujqc90oqc68f9j634mp\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .delValue(\"foo\")\n(root) {\n-   \"foo\": \"bar\"\n  }\n\n"
+
 	tc := []struct {
 		label string
 		in    string
@@ -52,7 +55,7 @@ func TestCommands(t *testing.T) {
 			"put foo",
 			1,
 			"",
-			"could not Put 'foo'='': couldnt parse value '' as json: unexpected end of JSON input\n",
+			"could not parse value \"\" as json: EOF\n",
 		},
 		{
 			"put good",
@@ -67,7 +70,7 @@ func TestCommands(t *testing.T) {
 			"",
 			"log --no-pager",
 			0,
-			"commit 0msppp2die542he6b4udelpe165gh1i2\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue(\"foo\", \"bar\")\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n",
+			commitA,
 			"",
 		},
 		{
@@ -198,6 +201,14 @@ func TestCommands(t *testing.T) {
 			"",
 			"",
 		},
+		{
+			"log del good",
+			"",
+			"log --no-pager",
+			0,
+			commitB + commitA,
+			"",
+		},
 	}
 
 	for _, c := range tc {
@@ -240,10 +251,19 @@ func TestDrop(t *testing.T) {
 
 	for i, t := range tc {
 		d, dir := db.LoadTempDB(assert)
-		d.Put("foo", []byte(`"bar"`))
-		val, err := d.Get("foo")
+
+		tx := d.NewTransaction()
+		err := tx.Put("foo", []byte(`"bar"`))
+		assert.NoError(err)
+		_, err = tx.Commit()
+		assert.NoError(err)
+
+		tx = d.NewTransaction()
+		val, err := tx.Get("foo")
 		assert.NoError(err)
 		assert.Equal(`"bar"`, string(val))
+		_, err = tx.Commit()
+		assert.NoError(err)
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)
 		args := append([]string{"--db=" + dir, "drop"})

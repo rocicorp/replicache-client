@@ -48,25 +48,41 @@ func TestBasics(t *testing.T) {
 		// put
 		{"put", invalidRequest, ``, invalidRequestError},
 		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""}, // getRoot when db didn't change
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, ""},
-		{"put", `{"id": "foo"}`, ``, "value field is required"},
-		{"put", `{"id": "foo", "value": null}`, `{"root":"jsi6q9qc1fhcg91skdgpirfgkotcuu0o"}`, ""},
-		{"put", `{"id": "foo", "value": "bar"}`, `{"root":"80744gunjjnad4e5pb8gkf8ntjcj02ca"}`, ""}, // so we can scan it
-		{"getRoot", `{}`, `{"root":"80744gunjjnad4e5pb8gkf8ntjcj02ca"}`, ""},                        // getRoot when db did change
+		{"put", `{"id": "foo", "value": "bar"}`, "", "Missing transaction ID"},
+
+		{"openTransaction", `{}`, `{"transactionId":1}`, ""},
+		{"put", `{"transactionId": 1, "id": "foo", "value": "bar"}`, `{}`, ""},
+		{"put", `{"transactionId": 1, "id": "foo"}`, ``, "value field is required"},
+		{"put", `{"transactionId": 1, "id": "foo", "value": null}`, `{}`, ""},
+		{"put", `{"transactionId": 1, "id": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
+		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},   // getRoot when db did change
+		{"commitTransaction", `{"transactionId":1}`, `{"ref":"p34f8g8jghkainifnsp966oqgf3pv88t"}`, ""},
+		{"getRoot", `{}`, `{"root":"d5024qks1v8sk57tjfg7ml14nugdm8e1"}`, ""}, // getRoot when db did change
 
 		// has
+
 		{"has", invalidRequest, ``, invalidRequestError},
-		{"has", `{"id": "foo"}`, `{"has":true}`, ""},
+		{"has", `{"id": "foo"}`, ``, "Missing transaction ID"},
+		{"openTransaction", `{}`, `{"transactionId":2}`, ""},
+		{"has", `{"transactionId": 2, "id": "foo"}`, `{"has":true}`, ""},
+		{"closeTransaction", `{"transactionId": 2}`, `{}`, ""},
 
 		// get
 		{"get", invalidRequest, ``, invalidRequestError},
-		{"get", `{"id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
+		{"get", `{"id": "foo"}`, "", "Missing transaction ID"},
+		{"openTransaction", `{}`, `{"transactionId":3}`, ""},
+		{"get", `{"transactionId": 3, "id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
+		{"closeTransaction", `{"transactionId": 3}`, `{}`, ""},
 
 		// scan
-		{"put", `{"id": "foopa", "value": "doopa"}`, `{"root":"i3p2c676665as6vhcv5032bhtguci02s"}`, ""},
-		{"scan", `{"prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"scan", `{"start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"scan", `{"start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},
+		{"openTransaction", `{}`, `{"transactionId":4}`, ""},
+		{"put", `{"transactionId": 4, "id": "foopa", "value": "doopa"}`, `{}`, ""},
+		{"commitTransaction", `{"transactionId":4}`, `{"ref":"n5sg13l13g5odv9kla1r5r5k7lhlef74"}`, ""},
+		{"openTransaction", `{}`, `{"transactionId":5}`, ""},
+		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
+		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},
+		{"closeTransaction", `{"transactionId":5}`, `{}`, ""},
 
 		// TODO: other scan operators
 	}
@@ -78,7 +94,7 @@ func TestBasics(t *testing.T) {
 			assert.EqualError(err, t.expectedError, "test case %s: %s", t.rpc, t.req)
 		} else {
 			assert.Equal(t.expectedResponse, string(res), "test case %s: %s", t.rpc, t.req)
-			assert.NoError(err, "test case %s: %s", t.rpc, t.req, "test case %s: %s", t.rpc, t.req)
+			assert.NoError(err, "test case %s: %s", t.rpc, t.req)
 		}
 	}
 }

@@ -50,25 +50,65 @@ func TestBasic(t *testing.T) {
 	res, err := Dispatch("db1", "open", nil)
 	assert.Nil(res)
 	assert.NoError(err)
-	resp, err := Dispatch("db1", "put", []byte(`{"id": "foo", "value": "bar"}`))
-	assert.Equal(`{"root":"0msppp2die542he6b4udelpe165gh1i2"}`, s(resp))
-	assert.NoError(err)
-	resp, err = Dispatch("db1", "get", []byte(`{"id": "foo"}`))
-	assert.Equal(`{"has":true,"value":"bar"}`, string(resp))
-	resp, err = Dispatch("db1", "del", []byte(`{"id": "foo"}`))
-	assert.Equal(`{"ok":true,"root":"hq8ulq2iptn2lujqc90oqc68f9j634mp"}`, s(resp))
+
+	{
+		resp, err := Dispatch("db1", "openTransaction", []byte(`{}`))
+		assert.NoError(err)
+		assert.Equal(`{"transactionId":1}`, s(resp))
+
+		resp, err = Dispatch("db1", "put", []byte(`{"transactionId": 1, "id": "foo", "value": "bar"}`))
+		assert.Equal(`{}`, s(resp))
+		assert.NoError(err)
+
+		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 1}`))
+		assert.Equal(`{"ref":"p34f8g8jghkainifnsp966oqgf3pv88t"}`, s(resp))
+		assert.NoError(err)
+	}
+
+	{
+		resp, err := Dispatch("db1", "openTransaction", []byte(`{}`))
+		assert.NoError(err)
+		assert.Equal(`{"transactionId":2}`, s(resp))
+
+		resp, err = Dispatch("db1", "get", []byte(`{"transactionId": 2, "id": "foo"}`))
+		assert.Equal(`{"has":true,"value":"bar"}`, string(resp))
+
+		resp, err = Dispatch("db1", "closeTransaction", []byte(`{"transactionId": 2}`))
+		assert.Equal(`{}`, s(resp))
+		assert.NoError(err)
+	}
+
+	{
+		resp, err := Dispatch("db1", "openTransaction", []byte(`{}`))
+		assert.NoError(err)
+		assert.Equal(`{"transactionId":3}`, s(resp))
+
+		resp, err = Dispatch("db1", "del", []byte(`{"transactionId": 3, "id": "foo"}`))
+		assert.Equal(`{"ok":true}`, s(resp))
+
+		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 3}`))
+		assert.Equal(`{"ref":"itlkmsge0msn3pj3upcpgh17rpsvil83"}`, s(resp))
+		assert.NoError(err)
+	}
+
 	testFile, err := ioutil.TempFile(connections["db1"].dir, "")
 	assert.NoError(err)
 
-	resp, err = Dispatch("db2", "put", []byte(`{"id": "foo", "value": "bar"}`))
-	assert.Nil(resp)
-	assert.EqualError(err, "specified database is not open")
+	{
+		resp, err := Dispatch("db1", "openTransaction", []byte(`{}`))
+		assert.NoError(err)
+		assert.Equal(`{"transactionId":4}`, s(resp))
 
-	resp, err = Dispatch("db1", "close", nil)
+		resp, err = Dispatch("db2", "put", []byte(`{"transactionId": 4, "id": "foo", "value": "bar"}`))
+		assert.Nil(resp)
+		assert.EqualError(err, "specified database is not open")
+	}
+
+	resp, err := Dispatch("db1", "close", nil)
 	assert.Nil(resp)
 	assert.NoError(err)
 
-	resp, err = Dispatch("db1", "put", []byte(`{"id": "foo", "value": "bar"}`))
+	resp, err = Dispatch("db1", "openTransaction", []byte(`{}`))
 	assert.Nil(resp)
 	assert.EqualError(err, "specified database is not open")
 

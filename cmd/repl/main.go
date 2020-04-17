@@ -23,6 +23,7 @@ import (
 	"roci.dev/diff-server/util/chk"
 	"roci.dev/diff-server/util/kp"
 	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/tbl"
 	rtime "roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
@@ -169,7 +170,9 @@ func has(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if err != nil {
 			return err
 		}
-		ok, err := db.Has(*id)
+		tx := db.NewTransaction()
+		defer tx.Close()
+		ok, err := tx.Has(*id)
 		if err != nil {
 			return err
 		}
@@ -190,7 +193,9 @@ func get(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if err != nil {
 			return err
 		}
-		v, err := db.Get(*id)
+		tx := db.NewTransaction()
+		defer tx.Close()
+		v, err := tx.Get(*id)
 		if err != nil {
 			return err
 		}
@@ -220,7 +225,9 @@ func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 		if err != nil {
 			return err
 		}
-		items, err := db.Scan(opts)
+		tx := db.NewTransaction()
+		defer tx.Close()
+		items, err := tx.Scan(opts)
 		if err != nil {
 			fmt.Fprintln(errs, err)
 			return nil
@@ -244,7 +251,22 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 		if _, err := v.ReadFrom(in); err != nil {
 			return err
 		}
-		return db.Put(*id, v.Bytes())
+
+		data := v.Bytes()
+		val, err := json.FromJSON(bytes.NewReader(data), db.Noms())
+		if err != nil {
+			return fmt.Errorf("could not parse value \"%s\" as json: %s", data, err)
+		}
+		args := types.NewList(db.Noms(), types.String(*id), val)
+		tx := db.NewTransactionWithArgs(".putValue", args)
+
+		err = tx.Put(*id, data)
+		if err == nil {
+			_, err = tx.Commit()
+		} else {
+			tx.Close()
+		}
+		return err
 	})
 }
 
@@ -256,14 +278,19 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		if err != nil {
 			return err
 		}
-		ok, err := db.Del(*id)
-		if err != nil {
-			return err
-		}
-		if !ok {
+		args := types.NewList(db.Noms(), types.String(*id))
+		tx := db.NewTransactionWithArgs(".delValue", args)
+
+		ok, err := tx.Del(*id)
+		if err == nil && !ok {
 			out.Write([]byte("No such id.\n"))
 		}
-		return nil
+		if err == nil {
+			_, err = tx.Commit()
+		} else {
+			tx.Close()
+		}
+		return err
 	})
 }
 

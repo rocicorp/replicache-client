@@ -16,8 +16,10 @@ func TestScan(t *testing.T) {
 	d, err := Load(sp)
 	assert.NoError(err)
 
+	tx := d.NewTransaction()
+
 	put := func(k string) {
-		err = d.Put(k, []byte(fmt.Sprintf("\"%s\"", k)))
+		err = tx.Put(k, []byte(fmt.Sprintf("\"%s\"", k)))
 		assert.NoError(err)
 	}
 
@@ -25,6 +27,9 @@ func TestScan(t *testing.T) {
 	put("a")
 	put("ba")
 	put("bb")
+
+	_, err = tx.Commit()
+	assert.NoError(err)
 
 	index := func(v int) *uint64 {
 		vv := uint64(v)
@@ -94,21 +99,26 @@ func TestScan(t *testing.T) {
 		{ScanOptions{Prefix: "a", Start: &ScanBound{Index: index(0), ID: &ScanID{Value: "z"}}}, []string{}, nil},
 	}
 
-	for i, t := range tc {
-		js, err := json.Marshal(t.opts)
+	for i, testCase := range tc {
+		js, err := json.Marshal(testCase.opts)
 		assert.NoError(err)
 		msg := fmt.Sprintf("case %d: %s", i, js)
-		res, err := d.Scan(t.opts)
-		if t.expectedError != nil {
-			assert.Error(t.expectedError, err, msg)
-			assert.Nil(res, msg)
-			continue
-		}
-		assert.NoError(err)
-		act := []string{}
-		for _, it := range res {
-			act = append(act, it.ID)
-		}
-		assert.Equal(t.expected, act, msg)
+		t.Run(string(js), func(t *testing.T) {
+			tx := d.NewTransaction()
+			defer tx.Close()
+
+			res, err := tx.Scan(testCase.opts)
+			if testCase.expectedError != nil {
+				assert.Error(testCase.expectedError, err, msg)
+				assert.Nil(res, msg)
+				return
+			}
+			assert.NoError(err)
+			act := []string{}
+			for _, it := range res {
+				act = append(act, it.ID)
+			}
+			assert.Equal(testCase.expected, act, msg)
+		})
 	}
 }

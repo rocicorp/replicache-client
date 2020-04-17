@@ -35,11 +35,6 @@ type ScanItem struct {
 	Value jsnoms.Value `json:"value"`
 }
 
-func (db *DB) Scan(opts ScanOptions) ([]ScanItem, error) {
-	// TODO fritz clean up
-	return scan(db.head.Data(db.noms).NomsMap(), opts)
-}
-
 func scan(data types.Map, opts ScanOptions) ([]ScanItem, error) {
 	var it *types.MapIterator
 
