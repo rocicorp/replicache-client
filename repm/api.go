@@ -77,7 +77,7 @@ func (conn *connection) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := tx.Has(req.ID)
+	ok, err := tx.Has(req.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, err := tx.Get(req.ID)
+	v, err := tx.Get(req.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (conn *connection) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = tx.Put(req.ID, req.Value)
+	err = tx.Put(req.Key, req.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ok, err := tx.Del(req.ID)
+	ok, err := tx.Del(req.Key)
 	if err != nil {
 		return nil, err
 	}

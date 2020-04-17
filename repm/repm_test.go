@@ -56,7 +56,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(`{"transactionId":1}`, s(resp))
 
-		resp, err = Dispatch("db1", "put", []byte(`{"transactionId": 1, "id": "foo", "value": "bar"}`))
+		resp, err = Dispatch("db1", "put", []byte(`{"transactionId": 1, "key": "foo", "value": "bar"}`))
 		assert.Equal(`{}`, s(resp))
 		assert.NoError(err)
 
@@ -70,7 +70,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(`{"transactionId":2}`, s(resp))
 
-		resp, err = Dispatch("db1", "get", []byte(`{"transactionId": 2, "id": "foo"}`))
+		resp, err = Dispatch("db1", "get", []byte(`{"transactionId": 2, "key": "foo"}`))
 		assert.Equal(`{"has":true,"value":"bar"}`, string(resp))
 
 		resp, err = Dispatch("db1", "closeTransaction", []byte(`{"transactionId": 2}`))
@@ -83,7 +83,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(`{"transactionId":3}`, s(resp))
 
-		resp, err = Dispatch("db1", "del", []byte(`{"transactionId": 3, "id": "foo"}`))
+		resp, err = Dispatch("db1", "del", []byte(`{"transactionId": 3, "key": "foo"}`))
 		assert.Equal(`{"ok":true}`, s(resp))
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 3}`))
@@ -99,7 +99,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 		assert.Equal(`{"transactionId":4}`, s(resp))
 
-		resp, err = Dispatch("db2", "put", []byte(`{"transactionId": 4, "id": "foo", "value": "bar"}`))
+		resp, err = Dispatch("db2", "put", []byte(`{"transactionId": 4, "key": "foo", "value": "bar"}`))
 		assert.Nil(resp)
 		assert.EqualError(err, "specified database is not open")
 	}

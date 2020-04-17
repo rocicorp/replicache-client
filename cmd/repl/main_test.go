@@ -47,7 +47,7 @@ func TestCommands(t *testing.T) {
 			"put",
 			1,
 			"",
-			"required argument 'id' not provided\n",
+			"required argument 'key' not provided\n",
 		},
 		{
 			"exec missing-val",
@@ -79,7 +79,7 @@ func TestCommands(t *testing.T) {
 			"has",
 			1,
 			"",
-			"required argument 'id' not provided\n",
+			"required argument 'key' not provided\n",
 		},
 		{
 			"has good",

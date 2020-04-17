@@ -20,7 +20,7 @@ type GetRootResponse struct {
 
 type HasRequest struct {
 	transactionRequest
-	ID string `json:"id"`
+	Key string `json:"key"`
 }
 
 type HasResponse struct {
@@ -29,7 +29,7 @@ type HasResponse struct {
 
 type GetRequest struct {
 	transactionRequest
-	ID string `json:"id"`
+	Key string `json:"key"`
 }
 
 type GetResponse struct {
@@ -43,7 +43,7 @@ type ScanRequest struct {
 }
 
 type ScanItem struct {
-	ID    string       `json:"id"`
+	Key   string       `json:"key"`
 	Value jsnoms.Value `json:"value"`
 }
 
@@ -54,7 +54,7 @@ type ScanResponse struct {
 
 type PutRequest struct {
 	transactionRequest
-	ID    string          `json:"id"`
+	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
 
@@ -62,7 +62,7 @@ type PutResponse struct{}
 
 type DelRequest struct {
 	transactionRequest
-	ID string `json:"id"`
+	Key string `json:"key"`
 }
 
 type DelResponse struct {

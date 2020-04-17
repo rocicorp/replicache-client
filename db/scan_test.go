@@ -116,7 +116,7 @@ func TestScan(t *testing.T) {
 			assert.NoError(err)
 			act := []string{}
 			for _, it := range res {
-				act = append(act, it.ID)
+				act = append(act, it.Key)
 			}
 			assert.Equal(testCase.expected, act, msg)
 		})

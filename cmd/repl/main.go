@@ -163,8 +163,8 @@ type gdb func() (db.DB, error)
 type gsp func() (spec.Spec, error)
 
 func has(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("has", "Check whether a value exists in the database.")
-	id := kc.Arg("id", "id of the value to check for").Required().String()
+	kc := parent.Command("has", "Check whether a key exists in the database.")
+	id := kc.Arg("key", "key of the value to check for").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		db, err := gdb()
 		if err != nil {
@@ -233,7 +233,7 @@ func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 			return nil
 		}
 		for _, it := range items {
-			fmt.Fprintf(out, "%s: %s\n", it.ID, types.EncodedValue(it.Value.Value))
+			fmt.Fprintf(out, "%s: %s\n", it.Key, types.EncodedValue(it.Value.Value))
 		}
 		return nil
 	})
@@ -241,7 +241,7 @@ func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 
 func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 	kc := parent.Command("put", "Reads a JSON-formated value from stdin and puts it into the database.")
-	id := kc.Arg("id", "id of the value to put").Required().String()
+	id := kc.Arg("key", "key of the value to put").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		db, err := gdb()
 		if err != nil {

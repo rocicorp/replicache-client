@@ -48,40 +48,40 @@ func TestBasics(t *testing.T) {
 		// put
 		{"put", invalidRequest, ``, invalidRequestError},
 		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""}, // getRoot when db didn't change
-		{"put", `{"id": "foo", "value": "bar"}`, "", "Missing transaction ID"},
+		{"put", `{"key": "foo", "value": "bar"}`, "", "Missing transaction ID"},
 
 		{"openTransaction", `{}`, `{"transactionId":1}`, ""},
-		{"put", `{"transactionId": 1, "id": "foo", "value": "bar"}`, `{}`, ""},
-		{"put", `{"transactionId": 1, "id": "foo"}`, ``, "value field is required"},
-		{"put", `{"transactionId": 1, "id": "foo", "value": null}`, `{}`, ""},
-		{"put", `{"transactionId": 1, "id": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
-		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},   // getRoot when db did change
+		{"put", `{"transactionId": 1, "key": "foo", "value": "bar"}`, `{}`, ""},
+		{"put", `{"transactionId": 1, "key": "foo"}`, ``, "value field is required"},
+		{"put", `{"transactionId": 1, "key": "foo", "value": null}`, `{}`, ""},
+		{"put", `{"transactionId": 1, "key": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
+		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},    // getRoot when db did change
 		{"commitTransaction", `{"transactionId":1}`, `{"ref":"p34f8g8jghkainifnsp966oqgf3pv88t"}`, ""},
 		{"getRoot", `{}`, `{"root":"d5024qks1v8sk57tjfg7ml14nugdm8e1"}`, ""}, // getRoot when db did change
 
 		// has
 
 		{"has", invalidRequest, ``, invalidRequestError},
-		{"has", `{"id": "foo"}`, ``, "Missing transaction ID"},
+		{"has", `{"key": "foo"}`, ``, "Missing transaction ID"},
 		{"openTransaction", `{}`, `{"transactionId":2}`, ""},
-		{"has", `{"transactionId": 2, "id": "foo"}`, `{"has":true}`, ""},
+		{"has", `{"transactionId": 2, "key": "foo"}`, `{"has":true}`, ""},
 		{"closeTransaction", `{"transactionId": 2}`, `{}`, ""},
 
 		// get
 		{"get", invalidRequest, ``, invalidRequestError},
-		{"get", `{"id": "foo"}`, "", "Missing transaction ID"},
+		{"get", `{"key": "foo"}`, "", "Missing transaction ID"},
 		{"openTransaction", `{}`, `{"transactionId":3}`, ""},
-		{"get", `{"transactionId": 3, "id": "foo"}`, `{"has":true,"value":"bar"}`, ""},
+		{"get", `{"transactionId": 3, "key": "foo"}`, `{"has":true,"value":"bar"}`, ""},
 		{"closeTransaction", `{"transactionId": 3}`, `{}`, ""},
 
 		// scan
 		{"openTransaction", `{}`, `{"transactionId":4}`, ""},
-		{"put", `{"transactionId": 4, "id": "foopa", "value": "doopa"}`, `{}`, ""},
+		{"put", `{"transactionId": 4, "key": "foopa", "value": "doopa"}`, `{}`, ""},
 		{"commitTransaction", `{"transactionId":4}`, `{"ref":"n5sg13l13g5odv9kla1r5r5k7lhlef74"}`, ""},
 		{"openTransaction", `{}`, `{"transactionId":5}`, ""},
-		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"id":"foo","value":"bar"},{"id":"foopa","value":"doopa"}]`, ""},
-		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"id":"foopa","value":"doopa"}]`, ""},
+		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
+		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
+		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"key":"foopa","value":"doopa"}]`, ""},
 		{"closeTransaction", `{"transactionId":5}`, `{}`, ""},
 
 		// TODO: other scan operators

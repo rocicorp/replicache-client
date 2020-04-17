@@ -31,7 +31,7 @@ type ScanOptions struct {
 }
 
 type ScanItem struct {
-	ID    string       `json:"id"`
+	Key   string       `json:"key"`
 	Value jsnoms.Value `json:"value"`
 }
 
@@ -89,7 +89,7 @@ func scan(data types.Map, opts ScanOptions) ([]ScanItem, error) {
 			break
 		}
 		res = append(res, ScanItem{
-			ID:    ks,
+			Key:   ks,
 			Value: jsnoms.Make(nil, v),
 		})
 		if len(res) == lim {
