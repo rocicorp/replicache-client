@@ -28,7 +28,7 @@ Struct Commit {
 			secSinceEpoch: Number,
 		},
 		name: String,
-		args: List<Value>,
+		args: Value,
 	} |
 	Struct Reorder {
 		date:   Struct DateTime {
@@ -47,7 +47,7 @@ Struct Commit {
 type Tx struct {
 	Date datetime.DateTime
 	Name string
-	Args types.List
+	Args types.Value
 }
 
 type Reorder struct {
@@ -223,7 +223,7 @@ func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types
 	return c
 }
 
-func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.List, newData types.Ref, checksum types.String) Commit {
+func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.Value, newData types.Ref, checksum types.String) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
 	c.Meta.Tx.Date = d

@@ -16,6 +16,7 @@ import (
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/diff-server/kv"
+	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -158,7 +159,7 @@ func (db *DB) execInternal(function string, args types.List) (types.Value, error
 }
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.
-func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDataRef types.Ref, newDataChecksum types.String, output types.Value, isWrite bool, err error) {
+func (db *DB) execImpl(basis types.Ref, function string, args types.Value) (newDataRef types.Ref, newDataChecksum types.String, output types.Value, isWrite bool, err error) {
 	var basisCommit Commit
 	err = marshal.Unmarshal(basis.TargetValue(db.noms), &basisCommit)
 	if err != nil {
@@ -170,8 +171,12 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 	if strings.HasPrefix(function, ".") {
 		switch function {
 		case ".putValue":
-			k := args.Get(0).(types.String)
-			v := args.Get(1)
+			if _, ok := args.(types.List); !ok {
+				err = fmt.Errorf("Internal error. Expected a List but got %s", types.TypeOf(args).Describe())
+				return
+			}
+			k := args.(types.List).Get(0).(types.String)
+			v := args.(types.List).Get(1)
 			ed := basisCommit.Data(db.noms).Edit()
 			isWrite = true
 			err = ed.Set(k, v)
@@ -185,7 +190,11 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 			break
 
 		case ".delValue":
-			k := args.Get(0).(types.String)
+			if _, ok := args.(types.List); !ok {
+				err = fmt.Errorf("Internal error. Expected a List but got %s", types.TypeOf(args).Describe())
+				return
+			}
+			k := args.(types.List).Get(0).(types.String)
 			m := basisCommit.Data(db.noms)
 			ed := m.Edit()
 			isWrite = true
@@ -210,17 +219,12 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.List) (newDa
 
 // NewTransaction returns a new Transaction.
 func (db *DB) NewTransaction() *Transaction {
-	return &Transaction{
-		db:   db,
-		head: db.head,
-		me:   db.head.Data(db.noms).Edit(),
-		args: types.NewList(db.noms),
-	}
+	return db.NewTransactionWithArgs("", jsnoms.Null())
 }
 
 // NewTransactionWithArgs creates a new transaction with a name and arguments.
 // The name and the arguments are used when replaying transactions.
-func (db *DB) NewTransactionWithArgs(name string, args types.List) *Transaction {
+func (db *DB) NewTransactionWithArgs(name string, args types.Value) *Transaction {
 	return &Transaction{
 		db:   db,
 		head: db.head,

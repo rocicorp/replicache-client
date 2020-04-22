@@ -56,8 +56,8 @@ func TestBasics(t *testing.T) {
 		{"put", `{"transactionId": 1, "key": "foo", "value": null}`, `{}`, ""},
 		{"put", `{"transactionId": 1, "key": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
 		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},    // getRoot when db did change
-		{"commitTransaction", `{"transactionId":1}`, `{"ref":"p34f8g8jghkainifnsp966oqgf3pv88t"}`, ""},
-		{"getRoot", `{}`, `{"root":"d5024qks1v8sk57tjfg7ml14nugdm8e1"}`, ""}, // getRoot when db did change
+		{"commitTransaction", `{"transactionId":1}`, `{"ref":"vlliua721kqig8c1litalcon2e6q6s5e"}`, ""},
+		{"getRoot", `{}`, `{"root":"892v1qo5h8ebksn5qmkn5nb7efkin9rd"}`, ""}, // getRoot when db did change
 
 		// has
 
@@ -77,7 +77,7 @@ func TestBasics(t *testing.T) {
 		// scan
 		{"openTransaction", `{}`, `{"transactionId":4}`, ""},
 		{"put", `{"transactionId": 4, "key": "foopa", "value": "doopa"}`, `{}`, ""},
-		{"commitTransaction", `{"transactionId":4}`, `{"ref":"n5sg13l13g5odv9kla1r5r5k7lhlef74"}`, ""},
+		{"commitTransaction", `{"transactionId":4}`, `{"ref":"uqktr5m7lejcditsbpgd338hgpq7fh4j"}`, ""},
 		{"openTransaction", `{}`, `{"transactionId":5}`, ""},
 		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},

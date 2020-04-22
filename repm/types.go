@@ -92,6 +92,8 @@ type PullProgressResponse struct {
 }
 
 type openTransactionRequest struct {
+	Name string          `json:"name,omitempty"`
+	Args json.RawMessage `json:"args,omitempty"`
 }
 
 type openTransactionResponse struct {

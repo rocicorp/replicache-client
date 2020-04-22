@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
 
 	"roci.dev/diff-server/util/time"
@@ -61,8 +62,9 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 1}`))
-		assert.Equal(`{"ref":"p34f8g8jghkainifnsp966oqgf3pv88t"}`, s(resp))
+		assert.Equal(`{"ref":"vlliua721kqig8c1litalcon2e6q6s5e"}`, s(resp))
 		assert.NoError(err)
+
 	}
 
 	{
@@ -87,7 +89,7 @@ func TestBasic(t *testing.T) {
 		assert.Equal(`{"ok":true}`, s(resp))
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 3}`))
-		assert.Equal(`{"ref":"itlkmsge0msn3pj3upcpgh17rpsvil83"}`, s(resp))
+		assert.Equal(`{"ref":"5sehgb089m82i7r5d4mh3026h3sur1gu"}`, s(resp))
 		assert.NoError(err)
 	}
 
@@ -102,6 +104,23 @@ func TestBasic(t *testing.T) {
 		resp, err = Dispatch("db2", "put", []byte(`{"transactionId": 4, "key": "foo", "value": "bar"}`))
 		assert.Nil(resp)
 		assert.EqualError(err, "specified database is not open")
+	}
+
+	{
+		resp, err := Dispatch("db1", "openTransaction", []byte(`{"name":"put-something","args":["foo","baz"]}`))
+		assert.NoError(err)
+		assert.Equal(`{"transactionId":5}`, s(resp))
+
+		resp, err = Dispatch("db1", "put", []byte(`{"transactionId": 5, "key": "foo", "value": "baz"}`))
+		assert.Equal(`{}`, s(resp))
+		assert.NoError(err)
+
+		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 5}`))
+		assert.Equal(`{"ref":"3n224dn1ft5u3tuvrqgbu0j1tr64vjuu"}`, s(resp))
+		assert.NoError(err)
+
+		assert.Equal("put-something", connections["db1"].db.Head().Meta.Tx.Name)
+		assert.Equal("[\n  \"foo\",\n  \"baz\",\n]", types.EncodedValue(connections["db1"].db.Head().Meta.Tx.Args))
 	}
 
 	resp, err := Dispatch("db1", "close", nil)

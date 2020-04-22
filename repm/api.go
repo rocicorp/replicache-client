@@ -1,6 +1,7 @@
 package repm
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -216,13 +217,25 @@ func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) newTransaction() int {
+func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage) (int, error) {
 	conn.transactionMutex.Lock()
 	defer conn.transactionMutex.Unlock()
 	txID := conn.transactionCounter
 	conn.transactionCounter++
-	conn.transactions[txID] = conn.db.NewTransaction()
-	return txID
+	var tx *db.Transaction
+
+	if name == "" && len(jsonArgs) == 0 {
+		tx = conn.db.NewTransaction()
+	} else {
+		nomsArgs, err := jsnoms.FromJSON(bytes.NewReader(jsonArgs), conn.db.Noms())
+		if err != nil {
+			return 0, err
+		}
+		tx = conn.db.NewTransactionWithArgs(name, nomsArgs)
+	}
+
+	conn.transactions[txID] = tx
+	return txID, nil
 }
 
 func (conn *connection) dispatchOpenTransaction(reqBytes []byte) ([]byte, error) {
@@ -232,7 +245,10 @@ func (conn *connection) dispatchOpenTransaction(reqBytes []byte) ([]byte, error)
 		return nil, err
 	}
 
-	txID := conn.newTransaction()
+	txID, err := conn.newTransaction(req.Name, req.Args)
+	if err != nil {
+		return nil, err
+	}
 
 	res := openTransactionResponse{
 		TransactionID: txID,

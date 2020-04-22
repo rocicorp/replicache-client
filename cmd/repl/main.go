@@ -391,20 +391,7 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			}
 
 			getTx := func() string {
-				args := []string{}
-				it := initialCommit.Meta.Tx.Args.Iterator()
-				for {
-					v := it.Next()
-					if v == nil {
-						break
-					}
-					if v.Kind() == types.BlobKind {
-						args = append(args, fmt.Sprintf("blob(%s)", v.Hash().String()))
-					} else {
-						args = append(args, types.EncodedValue(v))
-					}
-				}
-				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Tx.Name, strings.Join(args, ", "))
+				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Tx.Name, types.EncodedValue(initialCommit.Meta.Tx.Args))
 			}
 
 			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))

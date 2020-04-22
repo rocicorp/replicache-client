@@ -29,7 +29,7 @@ type Transaction struct {
 	wrote  bool
 	closed bool
 	name   string
-	args   types.List
+	args   types.Value
 	mutex  sync.RWMutex
 }
 
