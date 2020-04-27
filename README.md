@@ -1,3 +1,5 @@
+![Go](https://github.com/rocicorp/replicache-client/workflows/Go/badge.svg)
+
 # Replicache Client
 
 This is a shared native library used by all Replicache clients. Currently it is implemented by via of [GoMobile](https://godoc.org/golang.org/x/mobile/cmd/gomobile),
