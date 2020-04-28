@@ -11,82 +11,82 @@ import (
 	jsnoms "roci.dev/diff-server/util/noms/json"
 )
 
-type GetRootRequest struct {
+type getRootRequest struct {
 }
 
-type GetRootResponse struct {
+type getRootResponse struct {
 	Root jsnoms.Hash `json:"root"`
 }
 
-type HasRequest struct {
+type hasRequest struct {
 	transactionRequest
 	Key string `json:"key"`
 }
 
-type HasResponse struct {
+type hasResponse struct {
 	Has bool `json:"has"`
 }
 
-type GetRequest struct {
+type getRequest struct {
 	transactionRequest
 	Key string `json:"key"`
 }
 
-type GetResponse struct {
+type getResponse struct {
 	Has   bool            `json:"has"`
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
-type ScanRequest struct {
+type scanRequest struct {
 	transactionRequest
 	db.ScanOptions
 }
 
-type ScanItem struct {
+type scanItem struct {
 	Key   string       `json:"key"`
 	Value jsnoms.Value `json:"value"`
 }
 
-type ScanResponse struct {
-	Values []ScanItem `json:"values"`
+type scanResponse struct {
+	Values []scanItem `json:"values"`
 	Done   bool       `json:"done"`
 }
 
-type PutRequest struct {
+type putRequest struct {
 	transactionRequest
 	Key   string          `json:"key"`
 	Value json.RawMessage `json:"value"`
 }
 
-type PutResponse struct{}
+type putResponse struct{}
 
-type DelRequest struct {
+type delRequest struct {
 	transactionRequest
 	Key string `json:"key"`
 }
 
-type DelResponse struct {
+type delResponse struct {
 	Ok bool `json:"ok"`
 }
 
-type PullRequest struct {
+type pullRequest struct {
 	Remote         jsnoms.Spec `json:"remote"`
 	ClientViewAuth string      `json:"clientViewAuth"`
 }
 
-type PullResponseError struct {
+type pullResponseError struct {
 	BadAuth string `json:"badAuth"`
 }
 
-type PullResponse struct {
-	Error *PullResponseError `json:"error,omitempty"`
+type pullResponse struct {
+	Error *pullResponseError `json:"error,omitempty"`
 	Root  jsnoms.Hash        `json:"root,omitempty"`
 }
 
-type PullProgressRequest struct {
+type pullProgressRequest struct {
 }
 
-type PullProgressResponse struct {
+type pullProgressResponse struct {
 	BytesReceived uint64 `json:"bytesReceived"`
 	BytesExpected uint64 `json:"bytesExpected"`
 }

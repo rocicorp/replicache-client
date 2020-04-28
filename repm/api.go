@@ -53,13 +53,13 @@ func (conn *connection) removeTransaction(txID int) {
 }
 
 func (conn *connection) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
-	var req GetRootRequest
+	var req getRootRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
 
-	res := GetRootResponse{
+	res := getRootResponse{
 		Root: jsnoms.Hash{
 			Hash: conn.db.Hash(),
 		},
@@ -68,7 +68,7 @@ func (conn *connection) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
 }
 
 func (conn *connection) dispatchHas(reqBytes []byte) ([]byte, error) {
-	var req HasRequest
+	var req hasRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -82,14 +82,14 @@ func (conn *connection) dispatchHas(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := HasResponse{
+	res := hasResponse{
 		Has: ok,
 	}
 	return mustMarshal(res), nil
 }
 
 func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
-	var req GetRequest
+	var req getRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := GetResponse{}
+	res := getResponse{}
 	if v != nil {
 		res.Has = true
 		res.Value = v
@@ -111,7 +111,7 @@ func (conn *connection) dispatchGet(reqBytes []byte) ([]byte, error) {
 }
 
 func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
-	var req ScanRequest
+	var req scanRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
 }
 
 func (conn *connection) dispatchPut(reqBytes []byte) ([]byte, error) {
-	var req PutRequest
+	var req putRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -144,12 +144,12 @@ func (conn *connection) dispatchPut(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := PutResponse{}
+	res := putResponse{}
 	return mustMarshal(res), nil
 }
 
 func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
-	var req DelRequest
+	var req delRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -162,14 +162,14 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := DelResponse{
+	res := delResponse{
 		Ok: ok,
 	}
 	return mustMarshal(res), nil
 }
 
 func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
-	var req PullRequest
+	var req pullRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 
 	defer chk.True(atomic.CompareAndSwapInt32(&conn.pulling, 1, 0), "UNEXPECTED STATE: Overlapping pulls somehow!")
 
-	res := PullResponse{}
+	res := pullResponse{}
 	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
 		conn.sp = pullProgress{
 			bytesReceived: received,
@@ -196,7 +196,7 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 	}
 
 	if clientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
-		res.Error = &PullResponseError{
+		res.Error = &pullResponseError{
 			BadAuth: clientViewInfo.ErrorMessage,
 		}
 	}
@@ -205,12 +205,12 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 }
 
 func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
-	var req PullProgressRequest
+	var req pullProgressRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	res := PullProgressResponse{
+	res := pullProgressResponse{
 		BytesReceived: conn.sp.bytesReceived,
 		BytesExpected: conn.sp.bytesExpected,
 	}
