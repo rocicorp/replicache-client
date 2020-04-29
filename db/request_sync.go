@@ -33,13 +33,13 @@ func findGenesis(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	}
 
 	for p := c; len(p.Parents) > 0; {
-		v := noms.ReadValue(p.Parents[0].Hash())
+		v := noms.ReadValue(p.Parents[0].TargetHash())
 		if v == nil {
-			return Commit{}, fmt.Errorf("could not find parent %v", p.Parents[0])
+			return Commit{}, fmt.Errorf("could not find parent %v", types.EncodedValue(p.Parents[0]))
 		} else {
 			err := marshal.Unmarshal(v, &p)
 			if err != nil {
-				return Commit{}, fmt.Errorf("Error: Parent is not a commit: %#v", v)
+				return Commit{}, fmt.Errorf("Error: Parent is not a commit: %#v", types.EncodedValue(v))
 			}
 		}
 		if p.Type() == CommitTypeGenesis {
