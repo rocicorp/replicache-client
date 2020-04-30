@@ -360,7 +360,7 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		}
 
 		for {
-			if c.Type() == db.CommitTypeGenesis {
+			if c.Type() == db.CommitTypeSnapshot {
 				break
 			}
 
@@ -381,8 +381,8 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				case db.CommitTypeReorder:
 					r += " (REBASE)"
 					mergedTime = c.Meta.Reorder.Date.Time
-				case db.CommitTypeTx:
-					mergedTime = c.Meta.Tx.Date.Time
+				case db.CommitTypeLocal:
+					mergedTime = c.Meta.Local.Date.Time
 				default:
 					chk.Fail("unexpected commit type")
 				}
@@ -391,12 +391,12 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			}
 
 			getTx := func() string {
-				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Tx.Name, types.EncodedValue(initialCommit.Meta.Tx.Args))
+				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Local.Name, types.EncodedValue(initialCommit.Meta.Local.Args))
 			}
 
 			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
-				Add("Created: ", rtime.String(initialCommit.Meta.Tx.Date.Time))
+				Add("Created: ", rtime.String(initialCommit.Meta.Local.Date.Time))
 
 			status, t := getStatus()
 			table.Add("Status: ", status)

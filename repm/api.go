@@ -168,6 +168,34 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
+func (conn *connection) dispatchBeginSync(reqBytes []byte) ([]byte, error) {
+	var req beginSyncRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.ClientViewURL, req.DataLayerAuth)
+	if err != nil {
+		return nil, err
+	}
+	res := beginSyncResponse{
+		SyncHead: jsnoms.Hash{Hash: syncHead},
+		SyncInfo: syncInfo,
+	}
+	if syncInfo.BatchPushInfo.HTTPStatusCode == http.StatusUnauthorized {
+		res.PushError = &syncError{
+			BadAuth: syncInfo.BatchPushInfo.ErrorMessage,
+		}
+	}
+	if syncInfo.ClientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
+		res.PullError = &syncError{
+			BadAuth: syncInfo.ClientViewInfo.ErrorMessage,
+		}
+	}
+
+	return mustMarshal(res), nil
+}
+
 func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 	var req pullRequest
 	err := json.Unmarshal(reqBytes, &req)

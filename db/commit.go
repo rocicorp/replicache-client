@@ -19,11 +19,11 @@ Struct Commit {
 	parents: Set<Ref<Cycle<Commit>>>,
 	// TODO: It would be cool to call this field "op" or something, but Noms requires a "meta"
 	// top-level field.
-	meta: Struct Genesis {
+	meta: Struct Snapshot {
 		lastMutationID?: Number,
-		serverStateID?: String,  // only used on client
+		serverStateID?: String,
 	} |
-	Struct Tx {
+	Struct Local {
 		date:   Struct DateTime {
 			secSinceEpoch: Number,
 		},
@@ -44,10 +44,11 @@ Struct Commit {
 )
 
 // TODO: These types should be private
-type Tx struct {
-	Date datetime.DateTime
-	Name string
-	Args types.Value
+type Local struct {
+	MutationID uint64
+	Date       datetime.DateTime
+	Name       string
+	Args       types.Value
 }
 
 type Reorder struct {
@@ -55,16 +56,16 @@ type Reorder struct {
 	Subject types.Ref
 }
 
-type Genesis struct {
+type Snapshot struct {
 	LastMutationID uint64 `noms:",omitempty"`
 	ServerStateID  string `noms:",omitempty"`
 }
 
 type Meta struct {
 	// At most one of these will be set. If none are set, then the commit is the genesis commit.
-	Tx      Tx      `noms:",omitempty"`
-	Reorder Reorder `noms:",omitempty"`
-	Genesis Genesis `noms:",omitempty"`
+	Local    Local    `noms:",omitempty"`
+	Reorder  Reorder  `noms:",omitempty"`
+	Snapshot Snapshot `noms:",omitempty"`
 }
 
 func (m Meta) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error) {
@@ -73,7 +74,7 @@ func (m Meta) MarshalNoms(vrw types.ValueReadWriter) (val types.Value, err error
 		return nil, err
 	}
 	if v == nil {
-		v = types.NewStruct("Genesis", types.StructData{})
+		v = types.NewStruct("Snapshot", types.StructData{})
 	}
 	return v, nil
 }
@@ -95,22 +96,37 @@ type Commit struct {
 type CommitType uint8
 
 const (
-	CommitTypeGenesis = iota
-	CommitTypeTx
+	CommitTypeSnapshot = iota
+	CommitTypeLocal
 	CommitTypeReorder
 )
 
 func (t CommitType) String() string {
 	switch t {
-	case CommitTypeGenesis:
-		return "CommitTypeGenesis"
-	case CommitTypeTx:
-		return "CommitTypeTx"
+	case CommitTypeLocal:
+		return "CommitTypeLocal"
 	case CommitTypeReorder:
 		return "CommitTypeReorder"
+	case CommitTypeSnapshot:
+		return "CommitTypeSnapshot"
 	}
 	chk.Fail("NOTREACHED")
 	return ""
+}
+
+func (c Commit) NextMutationID() uint64 {
+	return c.MutationID() + 1
+}
+
+func (c Commit) MutationID() uint64 {
+	switch c.Type() {
+	case CommitTypeLocal:
+		return c.Meta.Local.MutationID
+	case CommitTypeSnapshot:
+		return c.Meta.Snapshot.LastMutationID
+	}
+	// TODO chk here once rebase commits are gone.
+	return 0
 }
 
 func (c Commit) Ref() types.Ref {
@@ -123,13 +139,13 @@ func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
 }
 
 func (c Commit) Type() CommitType {
-	if c.Meta.Tx.Name != "" {
-		return CommitTypeTx
+	if c.Meta.Local.Name != "" {
+		return CommitTypeLocal
 	}
 	if !c.Meta.Reorder.Subject.IsZeroValue() {
 		return CommitTypeReorder
 	}
-	return CommitTypeGenesis
+	return CommitTypeSnapshot
 }
 
 // TODO: Rename to Subject to avoid confusion with ref.TargetValue().
@@ -142,7 +158,7 @@ func (c Commit) Target() types.Ref {
 
 func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
 	switch c.Type() {
-	case CommitTypeTx, CommitTypeGenesis:
+	case CommitTypeLocal, CommitTypeSnapshot:
 		return c, nil
 	case CommitTypeReorder:
 		var t Commit
@@ -212,23 +228,53 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 	return r, nil
 }
 
-func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types.Ref, checksum types.String, lastMutationID uint64) Commit {
+// Returns the commits in order (ie, earliest first and head last).
+func pendingCommits(noms types.ValueReadWriter, head Commit) ([]Commit, error) {
+	if head.Type() == CommitTypeSnapshot {
+		return []Commit{}, nil
+	}
+	basis, err := head.Basis(noms)
+	if err != nil {
+		return []Commit{}, err
+	}
+	pending, err := pendingCommits(noms, basis)
+	if err != nil {
+		return []Commit{}, err
+	}
+
+	return append(pending, head), nil
+}
+
+func makeSnapshot(noms types.ValueReadWriter, basis types.Ref, serverStateID string, dataRef types.Ref, checksum types.String, lastMutationID uint64) Commit {
 	c := Commit{}
-	c.Meta.Genesis.LastMutationID = lastMutationID
-	c.Meta.Genesis.ServerStateID = serverStateID
+	c.Parents = []types.Ref{basis}
+	c.Meta.Snapshot.LastMutationID = lastMutationID
+	c.Meta.Snapshot.ServerStateID = serverStateID
 	c.Value.Data = dataRef
 	c.Value.Checksum = checksum
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
-	noms.WriteValue(c.Original)
 	return c
 }
 
-func makeTx(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, f string, args types.Value, newData types.Ref, checksum types.String) Commit {
+// makeGenesis makes the first Snapshot, the Snapshot with no parents.
+func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types.Ref, checksum types.String, lastMutationID uint64) Commit {
+	c := Commit{}
+	// Note: no c.Parents.
+	c.Meta.Snapshot.LastMutationID = lastMutationID
+	c.Meta.Snapshot.ServerStateID = serverStateID
+	c.Value.Data = dataRef
+	c.Value.Checksum = checksum
+	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	return c
+}
+
+func makeLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, mutationID uint64, f string, args types.Value, newData types.Ref, checksum types.String) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
-	c.Meta.Tx.Date = d
-	c.Meta.Tx.Name = f
-	c.Meta.Tx.Args = args
+	c.Meta.Local.MutationID = mutationID
+	c.Meta.Local.Date = d
+	c.Meta.Local.Name = f
+	c.Meta.Local.Args = args
 	c.Value.Data = newData
 	c.Value.Checksum = checksum
 	c.Original = marshal.MustMarshal(noms, c).(types.Struct)

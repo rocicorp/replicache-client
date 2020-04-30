@@ -43,11 +43,11 @@ func TestBasics(t *testing.T) {
 		// attempt to read non-json with get()
 
 		// getRoot on empty db
-		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},
+		{"getRoot", `{}`, `{"root":"e99uif9c7bpavajrt666es1ki52dv239"}`, ""},
 
 		// put
 		{"put", invalidRequest, ``, invalidRequestError},
-		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""}, // getRoot when db didn't change
+		{"getRoot", `{}`, `{"root":"e99uif9c7bpavajrt666es1ki52dv239"}`, ""}, // getRoot when db didn't change
 		{"put", `{"key": "foo", "value": "bar"}`, "", "Missing transaction ID"},
 
 		{"openTransaction", `{}`, `{"transactionId":1}`, ""},
@@ -55,12 +55,11 @@ func TestBasics(t *testing.T) {
 		{"put", `{"transactionId": 1, "key": "foo"}`, ``, "value field is required"},
 		{"put", `{"transactionId": 1, "key": "foo", "value": null}`, `{}`, ""},
 		{"put", `{"transactionId": 1, "key": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
-		{"getRoot", `{}`, `{"root":"4p3l8m7gjkkd8g3g0glothm038s61123"}`, ""},    // getRoot when db did change
-		{"commitTransaction", `{"transactionId":1}`, `{"ref":"vlliua721kqig8c1litalcon2e6q6s5e"}`, ""},
-		{"getRoot", `{}`, `{"root":"892v1qo5h8ebksn5qmkn5nb7efkin9rd"}`, ""}, // getRoot when db did change
+		{"getRoot", `{}`, `{"root":"e99uif9c7bpavajrt666es1ki52dv239"}`, ""},    // getRoot when db did change
+		{"commitTransaction", `{"transactionId":1}`, `{"ref":"0g06gscniuv33fnadaeg7go2mrerfr0s"}`, ""},
+		{"getRoot", `{}`, `{"root":"hafgie633fm1pg70olfum414ossa6mt6"}`, ""}, // getRoot when db did change
 
 		// has
-
 		{"has", invalidRequest, ``, invalidRequestError},
 		{"has", `{"key": "foo"}`, ``, "Missing transaction ID"},
 		{"openTransaction", `{}`, `{"transactionId":2}`, ""},
@@ -77,7 +76,7 @@ func TestBasics(t *testing.T) {
 		// scan
 		{"openTransaction", `{}`, `{"transactionId":4}`, ""},
 		{"put", `{"transactionId": 4, "key": "foopa", "value": "doopa"}`, `{}`, ""},
-		{"commitTransaction", `{"transactionId":4}`, `{"ref":"uqktr5m7lejcditsbpgd338hgpq7fh4j"}`, ""},
+		{"commitTransaction", `{"transactionId":4}`, `{"ref":"5e14js02ptiduku9st4fgk6ovvjfe2qe"}`, ""},
 		{"openTransaction", `{}`, `{"transactionId":5}`, ""},
 		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},

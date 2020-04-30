@@ -53,10 +53,11 @@ func TestRebase(t *testing.T) {
 
 	tx := func(basis Commit, arg string, ds string) Commit {
 		m := data(ds)
-		r := makeTx(
+		r := makeLocal(
 			noms,
 			basis.Ref(),
 			epoch,
+			basis.NextMutationID(),
 			".putValue",                          // function
 			list("foo", arg),                     // args
 			write(m.NomsMap()), m.NomsChecksum()) // result data

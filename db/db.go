@@ -30,6 +30,9 @@ type DB struct {
 	head     Commit
 	clientID string
 	mu       sync.Mutex
+
+	pusher pusher
+	puller puller
 }
 
 func Load(sp spec.Spec) (*DB, error) {
@@ -50,7 +53,9 @@ func Load(sp spec.Spec) (*DB, error) {
 
 func New(noms datas.Database) (*DB, error) {
 	r := DB{
-		noms: noms,
+		noms:   noms,
+		pusher: defaultPusher{},
+		puller: defaultPuller{},
 	}
 	defer r.lock()()
 	err := r.init()
@@ -67,6 +72,7 @@ func (db *DB) init() error {
 	cid := db.clientID
 	if cid == "" {
 		cid, err = initClientID(db.noms)
+		// TODO create obfuscated clientID for data layer here as well.
 		log.Printf("ClientID: %s", cid)
 	}
 	if err != nil {
@@ -134,7 +140,8 @@ func (db *DB) Reload() error {
 }
 
 func (db *DB) execInternal(function string, args types.List) (types.Value, error) {
-	basis := types.NewRef(db.head.Original)
+	head := db.Head()
+	basis := head.Ref()
 	newData, newDataChecksum, output, isWrite, err := db.execImpl(basis, function, args)
 	if err != nil {
 		return nil, err
@@ -145,7 +152,7 @@ func (db *DB) execInternal(function string, args types.List) (types.Value, error
 		return output, nil
 	}
 
-	commit := makeTx(db.noms, basis, time.DateTime(), function, args, newData, newDataChecksum)
+	commit := makeLocal(db.noms, basis, time.DateTime(), head.NextMutationID(), function, args, newData, newDataChecksum)
 	commitRef := db.noms.WriteValue(commit.Original)
 
 	// FastForward not strictly needed here because we should have already ensured that we were

@@ -56,22 +56,22 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	var newDataChecksum types.String
 
 	switch commit.Type() {
-	case CommitTypeTx:
-		// For Tx transactions, just re-run the tx with the new basis.
-		newData, newDataChecksum, _, _, err = db.execImpl(types.NewRef(newBasis.Original), commit.Meta.Tx.Name, commit.Meta.Tx.Args)
+	case CommitTypeLocal:
+		// For Local transactions, just re-run the tx with the new basis.
+		newData, newDataChecksum, _, _, err = db.execImpl(newBasis.Ref(), commit.Meta.Local.Name, commit.Meta.Local.Args)
 		if err != nil {
 			return Commit{}, err
 		}
 		break
 
 	case CommitTypeReorder:
-		// Reorder transactions can be recursive. But at the end of the chain there will eventually be an original Tx function.
+		// Reorder transactions can be recursive. But at the end of the chain there will eventually be an original Local function.
 		// Find it and re-run it against the new basis.
 		target, err := commit.InitalCommit(db.noms)
 		if err != nil {
 			return Commit{}, err
 		}
-		newData, newDataChecksum, _, _, err = db.execImpl(types.NewRef(newBasis.Original), target.Meta.Tx.Name, target.Meta.Tx.Args)
+		newData, newDataChecksum, _, _, err = db.execImpl(newBasis.Ref(), target.Meta.Local.Name, target.Meta.Local.Args)
 		if err != nil {
 			return Commit{}, err
 		}
@@ -79,7 +79,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	}
 
 	// Create and return the reorder commit, which will become the basis for the prev frame of the recursive call.
-	newCommit := makeReorder(db.noms, types.NewRef(newBasis.Original), date, types.NewRef(commit.Original), newData, newDataChecksum)
+	newCommit := makeReorder(db.noms, newBasis.Ref(), date, commit.Ref(), newData, newDataChecksum)
 	db.noms.WriteValue(newCommit.Original)
 	return newCommit, nil
 }

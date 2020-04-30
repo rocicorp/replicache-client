@@ -29,9 +29,8 @@ func TestMarshal(t *testing.T) {
 	drRef := noms.WriteValue(dr.NomsMap())
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
 	g := makeGenesis(noms, "", emRef, emChecksum, emLTID)
-	tx := makeTx(noms, types.NewRef(g.Original), d, "func", args, drRef, drChecksum)
+	tx := makeLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum)
 	noms.WriteValue(g.Original)
-	noms.WriteValue(tx.Original)
 
 	tc := []struct {
 		in  Commit
@@ -40,7 +39,7 @@ func TestMarshal(t *testing.T) {
 		{
 			makeGenesis(noms, "", emRef, emChecksum, uint64(0)),
 			types.NewStruct("Commit", types.StructData{
-				"meta":    types.NewStruct("Genesis", types.StructData{}),
+				"meta":    types.NewStruct("Snapshot", types.StructData{}),
 				"parents": types.NewSet(noms),
 				"value": types.NewStruct("", types.StructData{
 					"data":     emRef,
@@ -49,13 +48,13 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeGenesis(noms, "foo", emRef, emChecksum, emLTID),
+			makeSnapshot(noms, g.Ref(), "foo", emRef, emChecksum, emLTID),
 			types.NewStruct("Commit", types.StructData{
-				"meta": types.NewStruct("Genesis", types.StructData{
+				"meta": types.NewStruct("Snapshot", types.StructData{
 					"lastMutationID": types.Number(emLTID),
 					"serverStateID":  types.String("foo"),
 				}),
-				"parents": types.NewSet(noms),
+				"parents": types.NewSet(noms, g.Ref()),
 				"value": types.NewStruct("", types.StructData{
 					"data":     emRef,
 					"checksum": emChecksum,
@@ -65,11 +64,12 @@ func TestMarshal(t *testing.T) {
 		{
 			tx,
 			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original)),
-				"meta": types.NewStruct("Tx", types.StructData{
-					"date": marshal.MustMarshal(noms, d),
-					"name": types.String("func"),
-					"args": args,
+				"parents": types.NewSet(noms, g.Ref()),
+				"meta": types.NewStruct("Local", types.StructData{
+					"mutationID": types.Number(g.NextMutationID()),
+					"date":       marshal.MustMarshal(noms, d),
+					"name":       types.String("func"),
+					"args":       args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -78,13 +78,14 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeTx(noms, types.NewRef(g.Original), d, "func", args, drRef, drChecksum),
+			makeLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum),
 			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original)),
-				"meta": types.NewStruct("Tx", types.StructData{
-					"date": marshal.MustMarshal(noms, d),
-					"name": types.String("func"),
-					"args": args,
+				"parents": types.NewSet(noms, g.Ref()),
+				"meta": types.NewStruct("Local", types.StructData{
+					"mutationID": types.Number(g.NextMutationID()),
+					"date":       marshal.MustMarshal(noms, d),
+					"name":       types.String("func"),
+					"args":       args,
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -93,12 +94,12 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeReorder(noms, types.NewRef(g.Original), d, types.NewRef(tx.Original), drRef, drChecksum),
+			makeReorder(noms, g.Ref(), d, tx.Ref(), drRef, drChecksum),
 			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, types.NewRef(g.Original), types.NewRef(tx.Original)),
+				"parents": types.NewSet(noms, g.Ref(), tx.Ref()),
 				"meta": types.NewStruct("Reorder", types.StructData{
 					"date":    marshal.MustMarshal(noms, d),
-					"subject": types.NewRef(tx.Original),
+					"subject": tx.Ref(),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -115,10 +116,10 @@ func TestMarshal(t *testing.T) {
 
 		var roundtrip Commit
 		err = marshal.Unmarshal(act, &roundtrip)
-		assert.NoError(err)
+		assert.NoError(err, "test case: %d", i)
 
 		remarshalled, err := marshal.Marshal(noms, roundtrip)
-		assert.NoError(err)
+		assert.NoError(err, "test case: %d", i)
 		assert.True(act.Equals(remarshalled), fmt.Sprintf("test case %d", i))
 	}
 }

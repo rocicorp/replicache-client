@@ -62,7 +62,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 1}`))
-		assert.Equal(`{"ref":"vlliua721kqig8c1litalcon2e6q6s5e"}`, s(resp))
+		assert.Equal(`{"ref":"0g06gscniuv33fnadaeg7go2mrerfr0s"}`, s(resp))
 		assert.NoError(err)
 
 	}
@@ -89,7 +89,7 @@ func TestBasic(t *testing.T) {
 		assert.Equal(`{"ok":true}`, s(resp))
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 3}`))
-		assert.Equal(`{"ref":"5sehgb089m82i7r5d4mh3026h3sur1gu"}`, s(resp))
+		assert.Equal(`{"ref":"nc0mc2u1kjff3dd6qg3eqp2fc2i6dmtf"}`, s(resp))
 		assert.NoError(err)
 	}
 
@@ -116,11 +116,11 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 5}`))
-		assert.Equal(`{"ref":"3n224dn1ft5u3tuvrqgbu0j1tr64vjuu"}`, s(resp))
+		assert.Equal(`{"ref":"pt1j138ph8afpq2g7ilapc631i11s50p"}`, s(resp))
 		assert.NoError(err)
 
-		assert.Equal("put-something", connections["db1"].db.Head().Meta.Tx.Name)
-		assert.Equal("[\n  \"foo\",\n  \"baz\",\n]", types.EncodedValue(connections["db1"].db.Head().Meta.Tx.Args))
+		assert.Equal("put-something", connections["db1"].db.Head().Meta.Local.Name)
+		assert.Equal("[\n  \"foo\",\n  \"baz\",\n]", types.EncodedValue(connections["db1"].db.Head().Meta.Local.Args))
 	}
 
 	resp, err := Dispatch("db1", "close", nil)

@@ -169,13 +169,13 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 	}
 
 	// Commmit.
-	basis := types.NewRef(tx.head.Original)
+	basis := tx.head.Ref()
 
 	newMap := tx.me.Build()
 	newDataChecksum := newMap.NomsChecksum()
 	newData := tx.db.noms.WriteValue(newMap.NomsMap())
 
-	commit := makeTx(tx.db.noms, basis, time.DateTime(), tx.name, tx.args, newData, newDataChecksum)
+	commit := makeLocal(tx.db.noms, basis, time.DateTime(), tx.head.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
 
 	ref = tx.db.noms.WriteValue(commit.Original)
 

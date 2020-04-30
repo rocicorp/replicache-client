@@ -69,6 +69,20 @@ type delResponse struct {
 	Ok bool `json:"ok"`
 }
 
+
+type beginSyncRequest struct {
+	BatchPushURL  string `json:"batchPushURL"`
+	ClientViewURL string `json:"clientViewURL"`
+	DataLayerAuth string `json:"dataLayerAuth"`
+}
+
+type beginSyncResponse struct {
+	SyncHead  jsnoms.Hash `json:"syncHead,omitempty"`
+	SyncInfo  db.SyncInfo `json:"syncInfo,omitempty"`
+	PushError *syncError  `json:"pushError,omitempty"`
+	PullError *syncError  `json:"pullError,omitempty"`
+}
+
 type pullRequest struct {
 	Remote         jsnoms.Spec `json:"remote"`
 	ClientViewAuth string      `json:"clientViewAuth"`
@@ -81,6 +95,10 @@ type pullResponseError struct {
 type pullResponse struct {
 	Error *pullResponseError `json:"error,omitempty"`
 	Root  jsnoms.Hash        `json:"root,omitempty"`
+}
+
+type syncError struct {
+	BadAuth string `json:"badAuth"`
 }
 
 type pullProgressRequest struct {
