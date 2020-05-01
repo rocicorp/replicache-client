@@ -56,7 +56,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
-			syncSnapshot.Original.Hash(),
+			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			BatchPushInfo{HTTPStatusCode: 1},
 			"",
@@ -69,7 +69,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
-			syncSnapshot.Original.Hash(),
+			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			BatchPushInfo{},
 			"",
@@ -82,7 +82,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"push error",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
-			syncSnapshot.Original.Hash(),
+			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			BatchPushInfo{HTTPStatusCode: 1},
 			"",
@@ -117,7 +117,7 @@ func TestDB_BeginSync(t *testing.T) {
 
 			syncSnapshot = makeSnapshot(db.noms, commits.genesis().Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
 			// Ensure it is not saved so we can check that it is by sync.
-			assert.Nil(db.noms.ReadValue(syncSnapshot.Original.Hash()))
+			assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 
 			fakePusher := fakePusher{
 				info: tt.wantBPI,
@@ -145,7 +145,7 @@ func TestDB_BeginSync(t *testing.T) {
 			}
 
 			// Pull-specific assertions.
-			assert.True(commits.genesis().Original.Equals(fakePuller.gotBaseState.Original))
+			assert.True(commits.genesis().NomsStruct.Equals(fakePuller.gotBaseState.NomsStruct))
 			assert.Equal(diffServerURL, fakePuller.gotURL)
 			assert.Equal(dataLayerAuth, fakePuller.gotClientViewAuth)
 
@@ -154,15 +154,15 @@ func TestDB_BeginSync(t *testing.T) {
 			assert.Equal(tt.wantCVI, gotSyncInfo.ClientViewInfo)
 			assert.Equal(tt.wantBPI, gotSyncInfo.BatchPushInfo)
 			assert.NoError(db.Reload())
-			assert.True(commits.head().Original.Equals(db.Head().Original))
+			assert.True(commits.head().NomsStruct.Equals(db.Head().NomsStruct))
 			if tt.wantErr != "" {
 				assert.Error(gotErr)
 				assert.Regexp(tt.wantErr, gotErr.Error(), tt.name)
-				assert.Nil(db.noms.ReadValue(syncSnapshot.Original.Hash()))
+				assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 
 			} else {
 				assert.NoError(gotErr)
-				assert.NotNil(db.noms.ReadValue(syncSnapshot.Original.Hash()))
+				assert.NotNil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 			}
 		})
 	}
@@ -297,12 +297,12 @@ func TestDB_MaybeEndSync(t *testing.T) {
 				original := master[masterIndex]
 				assert.True(original.Type() == CommitTypeLocal)
 				replayed := makeLocal(db.noms, syncBranch.head().Ref(), d, original.MutationID(), original.Meta.Local.Name, original.Meta.Local.Args, original.Value.Data, original.Value.Checksum)
-				db.noms.WriteValue(replayed.Original)
+				db.noms.WriteValue(replayed.NomsStruct)
 				syncBranch = append(syncBranch, replayed)
 			}
 			syncHead := syncBranch.head()
 
-			gotEnded, gotReplay, err := db.MaybeEndSync(syncHead.Original.Hash())
+			gotEnded, gotReplay, err := db.MaybeEndSync(syncHead.NomsStruct.Hash())
 
 			assert.Equal(tt.expEnded, gotEnded, tt.name)
 			if tt.expErr != "" {
@@ -325,9 +325,9 @@ func TestDB_MaybeEndSync(t *testing.T) {
 				}
 			}
 			if tt.expEnded {
-				assert.True(syncHead.Original.Equals(db.head.Original))
+				assert.True(syncHead.NomsStruct.Equals(db.head.NomsStruct))
 			} else {
-				assert.True(master.head().Original.Equals(db.head.Original))
+				assert.True(master.head().NomsStruct.Equals(db.head.NomsStruct))
 			}
 		})
 	}

@@ -40,12 +40,12 @@ func TestRebase(t *testing.T) {
 	}
 
 	assertEqual := func(c1, c2 Commit) {
-		if c1.Original.Equals(c2.Original) {
+		if c1.NomsStruct.Equals(c2.NomsStruct) {
 			return
 		}
 		fmt.Println(c1.Data(noms).DebugString(), c2.Data(noms).DebugString())
-		fmt.Println(c1.Original.Hash(), c2.Original.Hash())
-		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.Original.Hash(), c2.Original.Hash(), diff.Diff(c1.Original, c2.Original))
+		fmt.Println(c1.NomsStruct.Hash(), c2.NomsStruct.Hash())
+		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.NomsStruct.Hash(), c2.NomsStruct.Hash(), diff.Diff(c1.NomsStruct, c2.NomsStruct))
 	}
 
 	g := db.head
@@ -61,7 +61,7 @@ func TestRebase(t *testing.T) {
 			".putValue",                          // function
 			list("foo", arg),                     // args
 			write(m.NomsMap()), m.NomsChecksum()) // result data
-		write(r.Original)
+		write(r.NomsStruct)
 		return r
 	}
 
@@ -73,7 +73,7 @@ func TestRebase(t *testing.T) {
 			epoch,
 			subject.Ref(),
 			write(m.NomsMap()), m.NomsChecksum()) // result data
-		write(r.Original)
+		write(r.NomsStruct)
 		return r
 	}
 
@@ -85,7 +85,7 @@ func TestRebase(t *testing.T) {
 			return
 		}
 		assert.NoError(err)
-		write(actual.Original)
+		write(actual.NomsStruct)
 		noms.Flush()
 		assertEqual(expected, actual)
 	}

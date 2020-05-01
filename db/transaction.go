@@ -23,14 +23,16 @@ var (
 // are not committed until Commit is called.
 // Transactions are thread safe.
 type Transaction struct {
-	db     *DB
-	head   Commit
-	me     *kv.MapEditor
-	wrote  bool
-	closed bool
-	name   string
-	args   types.Value
-	mutex  sync.RWMutex
+	db       *DB
+	basis    Commit
+	me       *kv.MapEditor
+	wrote    bool
+	closed   bool
+	name     string
+	args     types.Value
+	original *Commit // non-nil for replay transactions.
+
+	mutex sync.RWMutex
 }
 
 func (tx *Transaction) rlock() func() {
@@ -45,6 +47,11 @@ func (tx *Transaction) lock() func() {
 	return func() {
 		tx.mutex.Unlock()
 	}
+}
+
+// IsReplay returns true if the transaction is a replay.
+func (tx Transaction) IsReplay() bool {
+	return tx.original != nil
 }
 
 // Closed returns true when the transaction has been closed. A transaction
@@ -169,15 +176,29 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 	}
 
 	// Commmit.
-	basis := tx.head.Ref()
+	basis := tx.basis.Ref()
 
 	newMap := tx.me.Build()
 	newDataChecksum := newMap.NomsChecksum()
 	newData := tx.db.noms.WriteValue(newMap.NomsMap())
 
-	commit := makeLocal(tx.db.noms, basis, time.DateTime(), tx.head.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
+	var commit Commit
+	if tx.IsReplay() {
+		// Ideally we'd do this check earlier but we don't want to have a constructor
+		// that can fail. We have this check at the api level so this here is just extra
+		// protection.
+		err = ValidateReplayParams(*tx.original, tx.name, tx.args, tx.basis.NextMutationID())
+		if err != nil {
+			return
+		}
+		commit = makeReplayedLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum, *tx.original)
+		ref = tx.db.noms.WriteValue(commit.NomsStruct)
+		return
+	}
 
-	ref = tx.db.noms.WriteValue(commit.Original)
+	// TODO ensure name is not empty!
+	commit = makeLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
+	ref = tx.db.noms.WriteValue(commit.NomsStruct)
 
 	// Lock the db here to ensure we update the db.head atomically with the fast forward.
 	defer tx.db.lock()()
@@ -188,4 +209,20 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 	tx.db.head = commit
 
 	return
+}
+
+func ValidateReplayParams(original Commit, name string, args types.Value, mutationID uint64) error {
+	if original.Type() != CommitTypeLocal {
+		return fmt.Errorf("only local mutations can be replayed; %s is a %v", original.NomsStruct.Hash().String(), original.Type())
+	}
+	if name != original.Meta.Local.Name {
+		return fmt.Errorf("invalid replay: Names do not match")
+	}
+	if !args.Equals(original.Meta.Local.Args) {
+		return fmt.Errorf("invalid replay: Args do not match")
+	}
+	if mutationID != original.Meta.Local.MutationID {
+		return fmt.Errorf("invalid replay: MutationID values do not match")
+	}
+	return nil
 }

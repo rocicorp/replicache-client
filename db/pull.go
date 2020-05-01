@@ -33,7 +33,7 @@ func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	}
 	basis, err := c.Basis(noms)
 	if err != nil {
-		return Commit{}, fmt.Errorf("could not find base snapshot of %v: %w", c.Original.Hash(), err)
+		return Commit{}, fmt.Errorf("could not find base snapshot of %v: %w", c.NomsStruct.Hash(), err)
 	}
 	return baseSnapshot(noms, basis)
 }

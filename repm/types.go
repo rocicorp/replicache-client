@@ -118,8 +118,14 @@ type pullProgressResponse struct {
 }
 
 type openTransactionRequest struct {
-	Name string          `json:"name,omitempty"`
-	Args json.RawMessage `json:"args,omitempty"`
+	Name       string          `json:"name,omitempty"`
+	Args       json.RawMessage `json:"args,omitempty"`
+	RebaseOpts rebaseOpts      `json:"rebaseOpts,omitempty"`
+}
+
+type rebaseOpts struct {
+	Basis    *jsnoms.Hash
+	Original *jsnoms.Hash
 }
 
 type openTransactionResponse struct {

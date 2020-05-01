@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/chunks"
+	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
@@ -30,7 +31,7 @@ func TestMarshal(t *testing.T) {
 	args := types.NewList(noms, types.Bool(true), types.String("monkey"))
 	g := makeGenesis(noms, "", emRef, emChecksum, emLTID)
 	tx := makeLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum)
-	noms.WriteValue(g.Original)
+	noms.WriteValue(g.NomsStruct)
 
 	tc := []struct {
 		in  Commit
@@ -70,6 +71,7 @@ func TestMarshal(t *testing.T) {
 					"date":       marshal.MustMarshal(noms, d),
 					"name":       types.String("func"),
 					"args":       args,
+					"original":   marshal.MustMarshal(noms, hash.Hash{}),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -86,6 +88,24 @@ func TestMarshal(t *testing.T) {
 					"date":       marshal.MustMarshal(noms, d),
 					"name":       types.String("func"),
 					"args":       args,
+					"original":   marshal.MustMarshal(noms, hash.Hash{}),
+				}),
+				"value": types.NewStruct("", types.StructData{
+					"data":     drRef,
+					"checksum": drChecksum,
+				}),
+			}),
+		},
+		{
+			makeReplayedLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum, tx),
+			types.NewStruct("Commit", types.StructData{
+				"parents": types.NewSet(noms, g.Ref()),
+				"meta": types.NewStruct("Local", types.StructData{
+					"mutationID": types.Number(g.NextMutationID()),
+					"date":       marshal.MustMarshal(noms, d),
+					"name":       types.String("func"),
+					"args":       args,
+					"original":   marshal.MustMarshal(noms, tx.Ref().TargetHash()),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,

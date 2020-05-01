@@ -22,8 +22,8 @@ func TestCommands(t *testing.T) {
 	fmt.Println("test database:", td)
 	assert.NoError(err)
 
-	commitA := "commit 0edk63ktqf2m2oj9jrsge5mlk7bl39gp\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue([\n  \"foo\",\n  \"bar\",\n])\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n"
-	commitB := "commit 4mim1hir8ss5cmq09v886k75h7ru19o9\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .delValue([\n  \"foo\",\n])\n(root) {\n-   \"foo\": \"bar\"\n  }\n\n"
+	commitA := "commit itkr78gg9s1vei8hddu0hrgc775m1mel\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .putValue([\n  \"foo\",\n  \"bar\",\n])\n(root) {\n+   \"foo\": \"bar\"\n  }\n\n"
+	commitB := "commit 6lbqj85u5j28k2fb3d37h6vh7h0f6v3t\nCreated:     2014-01-24 00:00:00 -1000 HST\nStatus:      PENDING\nMerged:      2014-01-24 00:00:00 -1000 HST\nTransaction: .delValue([\n  \"foo\",\n])\n(root) {\n-   \"foo\": \"bar\"\n  }\n\n"
 
 	tc := []struct {
 		label string

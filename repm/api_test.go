@@ -56,8 +56,8 @@ func TestBasics(t *testing.T) {
 		{"put", `{"transactionId": 1, "key": "foo", "value": null}`, `{}`, ""},
 		{"put", `{"transactionId": 1, "key": "foo", "value": "bar"}`, `{}`, ""}, // so we can scan it
 		{"getRoot", `{}`, `{"root":"e99uif9c7bpavajrt666es1ki52dv239"}`, ""},    // getRoot when db did change
-		{"commitTransaction", `{"transactionId":1}`, `{"ref":"0g06gscniuv33fnadaeg7go2mrerfr0s"}`, ""},
-		{"getRoot", `{}`, `{"root":"hafgie633fm1pg70olfum414ossa6mt6"}`, ""}, // getRoot when db did change
+		{"commitTransaction", `{"transactionId":1}`, `{"ref":"eft96l0n1os3dbmjga6n59pblc00roj9"}`, ""},
+		{"getRoot", `{}`, `{"root":"eft96l0n1os3dbmjga6n59pblc00roj9"}`, ""}, // getRoot when db did change
 
 		// has
 		{"has", invalidRequest, ``, invalidRequestError},
@@ -74,14 +74,22 @@ func TestBasics(t *testing.T) {
 		{"closeTransaction", `{"transactionId": 3}`, `{}`, ""},
 
 		// scan
-		{"openTransaction", `{}`, `{"transactionId":4}`, ""},
+		{"openTransaction", `{"name": "foo", "args": []}`, `{"transactionId":4}`, ""},
 		{"put", `{"transactionId": 4, "key": "foopa", "value": "doopa"}`, `{}`, ""},
-		{"commitTransaction", `{"transactionId":4}`, `{"ref":"5e14js02ptiduku9st4fgk6ovvjfe2qe"}`, ""},
+		{"commitTransaction", `{"transactionId":4}`, `{"ref":"ir8von08b95s17t04gjk6qjas4m7om78"}`, ""},
 		{"openTransaction", `{}`, `{"transactionId":5}`, ""},
 		{"scan", `{"transactionId": 5, "prefix": "foo"}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo"}}}`, `[{"key":"foo","value":"bar"},{"key":"foopa","value":"doopa"}]`, ""},
 		{"scan", `{"transactionId": 5, "start": {"id": {"value": "foo", "exclusive": true}}}`, `[{"key":"foopa","value":"doopa"}]`, ""},
 		{"closeTransaction", `{"transactionId":5}`, `{}`, ""},
+
+		// Open transaction for replay
+		{"openTransaction", `{"name": "foo", "args": [], "rebaseOpts": {"basis": "e99uif9c7bpavajrt666es1ki52dv239", "original": "e99uif9c7bpavajrt666es1ki52dv239"}}`, ``, "only local mutations"}, // bad basis
+		{"openTransaction", `{"name": "foo", "args": [], "rebaseOpts": {"basis": "", "original": "e99uif9c7bpavajrt666es1ki52dv239"}}`, ``, "Invaild hash"},                                         // no basis
+		{"openTransaction", `{"name": "foo", "args": [], "rebaseOpts": {"basis": "e99uif9c7bpavajrt666es1ki52dv239", "original": "0000000000pavajrt666es1ki52dv239"}}`, ``, "not found"},            // bad original
+		{"openTransaction", `{"name": "foo", "args": [], "rebaseOpts": {"basis": "e99uif9c7bpavajrt666es1ki52dv239", "original": "ir8von08b95s17t04gjk6qjas4m7om78"}}`, `{"transactionId":8}`, ""},  // good case
+		{"put", `{"transactionId": 8, "key": "foom", "value": "fomo"}`, `{}`, ""},
+		{"commitTransaction", `{"transactionId":8}`, `{"ref":"0904mtoobeg7g0m833e03kn6abaa7022"}`, ""},
 
 		// TODO: other scan operators
 	}
@@ -90,7 +98,7 @@ func TestBasics(t *testing.T) {
 		res, err := Dispatch("db1", t.rpc, []byte(t.req))
 		if t.expectedError != "" {
 			assert.Nil(res, "test case %s: %s", t.rpc, t.req, "test case %s: %s", t.rpc, t.req)
-			assert.EqualError(err, t.expectedError, "test case %s: %s", t.rpc, t.req)
+			assert.Regexp(t.expectedError, err.Error(), "test case %s: %s", t.rpc, t.req)
 		} else {
 			assert.Equal(t.expectedResponse, string(res), "test case %s: %s", t.rpc, t.req)
 			assert.NoError(err, "test case %s: %s", t.rpc, t.req)

@@ -83,7 +83,7 @@ func (db *DB) init() error {
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
 		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
-		genRef := db.noms.WriteValue(genesis.Original)
+		genRef := db.noms.WriteValue(genesis.NomsStruct)
 		_, err := db.noms.FastForward(ds, genRef)
 		if err != nil {
 			return err
@@ -130,7 +130,7 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 }
 
 func (db *DB) Hash() hash.Hash {
-	return db.head.Original.Hash()
+	return db.head.NomsStruct.Hash()
 }
 
 func (db *DB) Reload() error {
@@ -153,7 +153,7 @@ func (db *DB) execInternal(function string, args types.List) (types.Value, error
 	}
 
 	commit := makeLocal(db.noms, basis, time.DateTime(), head.NextMutationID(), function, args, newData, newDataChecksum)
-	commitRef := db.noms.WriteValue(commit.Original)
+	commitRef := db.noms.WriteValue(commit.NomsStruct)
 
 	// FastForward not strictly needed here because we should have already ensured that we were
 	// fast-forwarding outside of Noms, but it's a nice sanity check.
@@ -226,18 +226,25 @@ func (db *DB) execImpl(basis types.Ref, function string, args types.Value) (newD
 
 // NewTransaction returns a new Transaction.
 func (db *DB) NewTransaction() *Transaction {
-	return db.NewTransactionWithArgs("", jsnoms.Null())
+	return db.NewTransactionWithArgs("", jsnoms.Null(), nil, nil)
 }
 
 // NewTransactionWithArgs creates a new transaction with a name and arguments.
-// The name and the arguments are used when replaying transactions.
-func (db *DB) NewTransactionWithArgs(name string, args types.Value) *Transaction {
+// The name and the arguments are used when replaying transactions. Basis and
+// original should be non-nil for replay transactions.
+func (db *DB) NewTransactionWithArgs(name string, args types.Value, basis *Commit, original *Commit) *Transaction {
+	head := db.Head()
+	if basis != nil {
+		head = *basis
+	}
+
 	return &Transaction{
-		db:   db,
-		head: db.head,
-		me:   db.head.Data(db.noms).Edit(),
-		name: name,
-		args: args,
+		db:       db,
+		basis:    head,
+		me:       head.Data(db.noms).Edit(),
+		name:     name,
+		args:     args,
+		original: original,
 	}
 }
 

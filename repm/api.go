@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/attic-labs/noms/go/hash"
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/replicache-client/db"
@@ -207,8 +208,8 @@ func (conn *connection) dispatchMaybeEndSync(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 	res := maybeEndSyncResponse{
-		Ended:            ended,
-	    ReplayMutations: replay,
+		Ended:           ended,
+		ReplayMutations: replay,
 	}
 	return mustMarshal(res), nil
 }
@@ -262,7 +263,7 @@ func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage) (int, error) {
+func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage, basis hash.Hash, original hash.Hash) (int, error) {
 	conn.transactionMutex.Lock()
 	defer conn.transactionMutex.Unlock()
 	txID := conn.transactionCounter
@@ -276,7 +277,25 @@ func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage) (i
 		if err != nil {
 			return 0, err
 		}
-		tx = conn.db.NewTransactionWithArgs(name, nomsArgs)
+		var basisCommit, originalCommit *db.Commit
+		// If it's a replay...
+		if basis != (hash.Hash{}) {
+			b, err := db.ReadCommit(conn.db.Noms(), basis)
+			if err != nil {
+				return 0, err
+			}
+			basisCommit = &b
+			o, err := db.ReadCommit(conn.db.Noms(), original)
+			if err != nil {
+				return 0, err
+			}
+			originalCommit = &o
+			if err := db.ValidateReplayParams(*originalCommit, name, nomsArgs, basisCommit.NextMutationID()); err != nil {
+				return 0, err
+			}
+		}
+
+		tx = conn.db.NewTransactionWithArgs(name, nomsArgs, basisCommit, originalCommit)
 	}
 
 	conn.transactions[txID] = tx
@@ -290,7 +309,13 @@ func (conn *connection) dispatchOpenTransaction(reqBytes []byte) ([]byte, error)
 		return nil, err
 	}
 
-	txID, err := conn.newTransaction(req.Name, req.Args)
+	var basis, original hash.Hash
+	if (req.RebaseOpts != rebaseOpts{}) {
+		basis = req.RebaseOpts.Basis.Hash
+		original = req.RebaseOpts.Original.Hash
+	}
+
+	txID, err := conn.newTransaction(req.Name, req.Args, basis, original)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +363,7 @@ func (conn *connection) dispatchCommitTransaction(reqBytes []byte) ([]byte, erro
 	res := commitTransactionResponse{}
 	if !commitRef.IsZeroValue() {
 		res.Ref = &jsnoms.Hash{
-			Hash: commitRef.Hash(),
+			Hash: commitRef.TargetHash(),
 		}
 	}
 	return mustMarshal(res), nil

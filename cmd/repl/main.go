@@ -258,7 +258,7 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 			return fmt.Errorf("could not parse value \"%s\" as json: %s", data, err)
 		}
 		args := types.NewList(db.Noms(), types.String(*id), val)
-		tx := db.NewTransactionWithArgs(".putValue", args)
+		tx := db.NewTransactionWithArgs(".putValue", args, nil, nil)
 
 		err = tx.Put(*id, data)
 		if err == nil {
@@ -279,7 +279,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			return err
 		}
 		args := types.NewList(db.Noms(), types.String(*id))
-		tx := db.NewTransactionWithArgs(".delValue", args)
+		tx := db.NewTransactionWithArgs(".delValue", args, nil, nil)
 
 		ok, err := tx.Del(*id)
 		if err == nil && !ok {
@@ -364,7 +364,7 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				break
 			}
 
-			if c.Original.Equals(r.Original) {
+			if c.NomsStruct.Equals(r.NomsStruct) {
 				inRemote = true
 			}
 
@@ -394,7 +394,7 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Local.Name, types.EncodedValue(initialCommit.Meta.Local.Args))
 			}
 
-			fmt.Fprintln(out, color("commit "+c.Original.Hash().String(), "red+h"))
+			fmt.Fprintln(out, color("commit "+c.NomsStruct.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
 				Add("Created: ", rtime.String(initialCommit.Meta.Local.Date.Time))
 
@@ -404,12 +404,12 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				table.Add("Merged: ", rtime.String(t))
 			}
 
-			if !initialCommit.Original.Equals(c.Original) {
+			if !initialCommit.NomsStruct.Equals(c.NomsStruct) {
 				initialBasis, err := initialCommit.Basis(d.Noms())
 				if err != nil {
 					return err
 				}
-				table.Add("Initial Basis: ", initialBasis.Original.Hash().String())
+				table.Add("Initial Basis: ", initialBasis.NomsStruct.Hash().String())
 			}
 			table.Add("Transaction: ", getTx())
 

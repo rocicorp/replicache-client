@@ -3,10 +3,13 @@ package db
 import (
 	"testing"
 
+	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
+	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/kv"
 )
 
 func assertDataEquals(assert *assert.Assertions, db *DB, expr string) {
@@ -249,4 +252,71 @@ func TestMultipleWriteTransactionClose(t *testing.T) {
 	_, err = tx2.Commit()
 	assert.NoError(err)
 	assertDataEquals(assert, db, `map {"k": "v2"}`)
+}
+
+func TestReplayWriteTransaction(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+	d := datetime.Now()
+
+	master := testCommits{db.head}
+	master.addLocal(assert, db, d)
+	sync := testCommits{master.genesis()}
+	sync.addSnapshot(assert, db)
+
+	tests := []struct {
+		name        string
+		basis       Commit
+		original    Commit
+		expError    string
+		expOriginal Commit
+	}{
+		{
+			"good replay",
+			sync.head(),
+			master.head(),
+			"",
+			master.head(),
+		},
+		{
+			"bad replay: original is a snapshot",
+			sync.head(),
+			master.genesis(),
+			"Snapshot",
+			Commit{},
+		},
+	}
+
+	e := kv.NewMap(db.noms).Edit()
+	e.Set(types.String("key"), types.Bool(true))
+	expChecksum := e.Build().Checksum()
+
+	for _, tt := range tests {
+		head := db.head
+		tx := db.NewTransactionWithArgs(tt.original.Meta.Local.Name, tt.original.Meta.Local.Args, &tt.basis, &tt.original)
+		assert.True(tx.IsReplay())
+		assert.NoError(tx.Put("key", []byte("true")))
+		gotRef, err := tx.Commit()
+		assert.True(db.head.NomsStruct.Equals(head.NomsStruct))
+		if tt.expError != "" {
+			assert.Error(err)
+			assert.Regexp(tt.expError, err.Error())
+		} else {
+			assert.NoError(err)
+			v := gotRef.TargetValue(db.noms)
+			assert.NotNil(v)
+			var gotCommit Commit
+			marshal.MustUnmarshal(v, &gotCommit)
+			gotBasis, err := gotCommit.Basis(db.noms)
+			assert.NoError(err)
+			assert.True(tt.basis.NomsStruct.Equals(gotBasis.NomsStruct))
+			gotOriginal, err := gotCommit.Original(db.noms)
+			assert.NoError(err)
+			assert.True(tt.original.NomsStruct.Equals(gotOriginal.NomsStruct), "%s: %s != %s", tt.name, tt.original.NomsStruct.Hash(), gotOriginal.NomsStruct.Hash())
+			assert.Equal(tt.original.Meta.Local.Name, gotCommit.Meta.Local.Name)
+			assert.Equal(tt.original.Meta.Local.MutationID, gotCommit.Meta.Local.MutationID)
+			assert.True(tt.original.Meta.Local.Args.Equals(gotCommit.Meta.Local.Args))
+			assert.Equal(expChecksum, string(gotCommit.Value.Checksum))
+		}
+	}
 }

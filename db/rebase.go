@@ -47,7 +47,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 	}
 
 	// If the current and desired basis match, this is a fast-forward, and there's nothing to do.
-	if newBasis.Original.Equals(oldBasis.Original) {
+	if newBasis.NomsStruct.Equals(oldBasis.NomsStruct) {
 		return commit, nil
 	}
 
@@ -80,7 +80,7 @@ func rebase(db *DB, onto types.Ref, date datetime.DateTime, commit Commit, forkP
 
 	// Create and return the reorder commit, which will become the basis for the prev frame of the recursive call.
 	newCommit := makeReorder(db.noms, newBasis.Ref(), date, commit.Ref(), newData, newDataChecksum)
-	db.noms.WriteValue(newCommit.Original)
+	db.noms.WriteValue(newCommit.NomsStruct)
 	return newCommit, nil
 }
 

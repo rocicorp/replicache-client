@@ -28,19 +28,19 @@ func TestBaseSnapshot(t *testing.T) {
 	commits.addGenesis(assert, db)
 	c, err := baseSnapshot(db.noms, commits.head())
 	assert.NoError(err)
-	assert.True(commits.genesis().Original.Equals(c.Original))
+	assert.True(commits.genesis().NomsStruct.Equals(c.NomsStruct))
 
 	commits.addLocal(assert, db, d).addLocal(assert, db, d)
 	c, err = baseSnapshot(db.noms, commits.head())
 	assert.NoError(err)
-	assert.True(commits.genesis().Original.Equals(c.Original))
+	assert.True(commits.genesis().NomsStruct.Equals(c.NomsStruct))
 
 	commits.addSnapshot(assert, db)
 	expSnapshot := commits.head()
 	commits.addLocal(assert, db, d)
 	c, err = baseSnapshot(db.noms, commits.head())
 	assert.NoError(err)
-	assert.True(expSnapshot.Original.Equals(c.Original))
+	assert.True(expSnapshot.NomsStruct.Equals(c.NomsStruct))
 }
 
 func TestPull(t *testing.T) {
@@ -300,7 +300,7 @@ func TestPull(t *testing.T) {
 		}
 		m := ed.Build()
 		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 1 /*lastMutationID*/)
-		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(g.Original))
+		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(g.NomsStruct))
 		assert.NoError(err)
 		err = db.Reload()
 		assert.NoError(err, t.label)

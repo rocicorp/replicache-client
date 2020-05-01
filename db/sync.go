@@ -50,7 +50,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 	if err != nil {
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: %w", err)
 	}
-	syncHeadRef := db.noms.WriteValue(newSnapshot.Original)
+	syncHeadRef := db.noms.WriteValue(newSnapshot.NomsStruct)
 
 	return syncHeadRef.TargetHash(), syncInfo, nil
 }
@@ -81,8 +81,8 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	if err != nil {
 		return false, []Mutation{}, err
 	}
-	if !syncSnapshotBasis.Original.Equals(headSnapshot.Original) {
-		return false, []Mutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.Original.Hash())
+	if !syncSnapshotBasis.NomsStruct.Equals(headSnapshot.NomsStruct) {
+		return false, []Mutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
 	}
 
 	// Determine if there are any pending mutations that we need to replay.

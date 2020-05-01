@@ -1,8 +1,10 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/nomdl"
 	"github.com/attic-labs/noms/go/types"
@@ -49,6 +51,7 @@ type Local struct {
 	Date       datetime.DateTime
 	Name       string
 	Args       types.Value
+	Original   hash.Hash
 }
 
 type Reorder struct {
@@ -90,7 +93,7 @@ type Commit struct {
 		Data     types.Ref `noms:",omitempty"`
 		Checksum types.String
 	}
-	Original types.Struct `noms:",original"`
+	NomsStruct types.Struct `noms:",original"`
 }
 
 type CommitType uint8
@@ -130,7 +133,7 @@ func (c Commit) MutationID() uint64 {
 }
 
 func (c Commit) Ref() types.Ref {
-	return types.NewRef(c.Original)
+	return types.NewRef(c.NomsStruct)
 }
 
 func (c Commit) Data(noms types.ValueReadWriter) kv.Map {
@@ -156,6 +159,13 @@ func (c Commit) Target() types.Ref {
 	return types.Ref{}
 }
 
+func (c Commit) Original(noms types.ValueReadWriter) (Commit, error) {
+	if c.Meta.Local.Original.IsEmpty() {
+		return Commit{}, nil
+	}
+	return ReadCommit(noms, c.Meta.Local.Original)
+}
+
 func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
 	switch c.Type() {
 	case CommitTypeLocal, CommitTypeSnapshot:
@@ -168,7 +178,7 @@ func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
 		}
 		return t.InitalCommit(noms)
 	}
-	return Commit{}, fmt.Errorf("Unexpected commit of type %v: %s", c.Type(), types.EncodedValue(c.Original))
+	return Commit{}, fmt.Errorf("Unexpected commit of type %v: %s", c.Type(), types.EncodedValue(c.NomsStruct))
 }
 
 func (c Commit) TargetValue(noms types.ValueReadWriter) types.Value {
@@ -198,16 +208,16 @@ func (c Commit) BasisRef() types.Ref {
 	case 2:
 		subj := c.Target()
 		if subj.IsZeroValue() {
-			chk.Fail("Unexpected 2-parent type of commit with hash: %s", c.Original.Hash().String())
+			chk.Fail("Unexpected 2-parent type of commit with hash: %s", c.NomsStruct.Hash().String())
 		}
 		for _, p := range c.Parents {
 			if !p.Equals(subj) {
 				return p
 			}
 		}
-		chk.Fail("Unexpected state for commit with hash: %s", c.Original.Hash().String())
+		chk.Fail("Unexpected state for commit with hash: %s", c.NomsStruct.Hash().String())
 	}
-	chk.Fail("Unexpected number of parents (%d) for commit with hash: %s", len(c.Parents), c.Original.Hash().String())
+	chk.Fail("Unexpected number of parents (%d) for commit with hash: %s", len(c.Parents), c.NomsStruct.Hash().String())
 	return types.Ref{}
 }
 
@@ -226,6 +236,19 @@ func (c Commit) Basis(noms types.ValueReader) (Commit, error) {
 		return Commit{}, err
 	}
 	return r, nil
+}
+
+func ReadCommit(noms types.ValueReadWriter, hash hash.Hash) (Commit, error) {
+	if hash.IsEmpty() {
+		return Commit{}, errors.New("commit (empty hash) not found")
+	}
+	v := noms.ReadValue(hash)
+	if v == nil {
+		return Commit{}, fmt.Errorf("commit %s not found", hash)
+	}
+	var c Commit
+	err := marshal.Unmarshal(v, &c)
+	return c, err
 }
 
 // Returns the commits in order (ie, earliest first and head last).
@@ -252,7 +275,7 @@ func makeSnapshot(noms types.ValueReadWriter, basis types.Ref, serverStateID str
 	c.Meta.Snapshot.ServerStateID = serverStateID
 	c.Value.Data = dataRef
 	c.Value.Checksum = checksum
-	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
 
@@ -264,7 +287,7 @@ func makeGenesis(noms types.ValueReadWriter, serverStateID string, dataRef types
 	c.Meta.Snapshot.ServerStateID = serverStateID
 	c.Value.Data = dataRef
 	c.Value.Checksum = checksum
-	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
 
@@ -277,7 +300,21 @@ func makeLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime,
 	c.Meta.Local.Args = args
 	c.Value.Data = newData
 	c.Value.Checksum = checksum
-	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
+	return c
+}
+
+func makeReplayedLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, mutationID uint64, f string, args types.Value, newData types.Ref, checksum types.String, original Commit) Commit {
+	c := Commit{}
+	c.Parents = []types.Ref{basis}
+	c.Meta.Local.MutationID = mutationID
+	c.Meta.Local.Date = d
+	c.Meta.Local.Name = f
+	c.Meta.Local.Args = args
+	c.Meta.Local.Original = original.NomsStruct.Hash()
+	c.Value.Data = newData
+	c.Value.Checksum = checksum
+	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
 
@@ -288,6 +325,6 @@ func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTim
 	c.Meta.Reorder.Subject = subject
 	c.Value.Data = newData
 	c.Value.Checksum = checksum
-	c.Original = marshal.MustMarshal(noms, c).(types.Struct)
+	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
 	return c
 }
