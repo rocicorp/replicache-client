@@ -196,6 +196,23 @@ func (conn *connection) dispatchBeginSync(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
+func (conn *connection) dispatchMaybeEndSync(reqBytes []byte) ([]byte, error) {
+	var req maybeEndSyncRequest
+	err := json.Unmarshal(reqBytes, &req)
+	if err != nil {
+		return nil, err
+	}
+	ended, replay, err := conn.db.MaybeEndSync(req.SyncHead.Hash)
+	if err != nil {
+		return nil, err
+	}
+	res := maybeEndSyncResponse{
+		Ended:            ended,
+	    ReplayMutations: replay,
+	}
+	return mustMarshal(res), nil
+}
+
 func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 	var req pullRequest
 	err := json.Unmarshal(reqBytes, &req)

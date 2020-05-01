@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
+	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 func TestDB_BeginSync(t *testing.T) {
@@ -109,6 +111,10 @@ func TestDB_BeginSync(t *testing.T) {
 			for i := 0; i < tt.numLocals; i++ {
 				commits.addLocal(assert, db, d)
 			}
+			db.head = commits.head()
+			_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), db.head.Ref())
+			assert.NoError(err)
+
 			syncSnapshot = makeSnapshot(db.noms, commits.genesis().Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
 			// Ensure it is not saved so we can check that it is by sync.
 			assert.Nil(db.noms.ReadValue(syncSnapshot.Original.Hash()))
@@ -205,4 +211,124 @@ func (f *fakePuller) Pull(noms types.ValueReadWriter, baseState Commit, url stri
 		return f.newSnapshot, f.clientViewInfo, nil
 	}
 	return Commit{}, f.clientViewInfo, errors.New(f.err)
+}
+
+func TestDB_MaybeEndSync(t *testing.T) {
+	assert := assert.New(t)
+	d := datetime.Now()
+
+	tests := []struct {
+		name             string
+		numPending       int
+		numNeedingReplay int
+		interveningSync  bool
+		expEnded         bool
+		expReplayIds     []uint64
+		expErr           string
+	}{
+		{
+			"nothing pending",
+			0,
+			0,
+			false,
+			true,
+			[]uint64{},
+			"",
+		},
+		{
+			"2 pending but nothing to replay",
+			2,
+			0,
+			false,
+			true,
+			[]uint64{},
+			"",
+		},
+		{
+			"3 pending, 2 to replay",
+			3,
+			2,
+			false,
+			false,
+			[]uint64{2, 3},
+			"",
+		},
+		{
+			"a different sync has landed a new snapshot on master with no pending",
+			0,
+			0,
+			true,
+			false,
+			[]uint64{},
+			"newer snapshot",
+		},
+		{
+			"a different sync has landed a new snapshot on master with pending",
+			2,
+			0,
+			true,
+			false,
+			[]uint64{},
+			"newer snapshot",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, _ := LoadTempDB(assert)
+			var master testCommits
+			master = append(master, db.head)
+			for i := 0; i < tt.numPending; i++ {
+				master.addLocal(assert, db, d)
+			}
+			if tt.interveningSync {
+				master.addSnapshot(assert, db)
+			}
+			db.head = master.head()
+			_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), db.head.Ref())
+			assert.NoError(err)
+
+			syncBranch := testCommits{master.genesis()}
+			syncBranch.addSnapshot(assert, db)
+			// Add the already replayed mutations to the sync branch.
+			for i := 0; i < tt.numPending-tt.numNeedingReplay; i++ {
+				// Pending commits start at index 1 (index 0 is genesis).
+				masterIndex := 1 + i
+				original := master[masterIndex]
+				assert.True(original.Type() == CommitTypeLocal)
+				replayed := makeLocal(db.noms, syncBranch.head().Ref(), d, original.MutationID(), original.Meta.Local.Name, original.Meta.Local.Args, original.Value.Data, original.Value.Checksum)
+				db.noms.WriteValue(replayed.Original)
+				syncBranch = append(syncBranch, replayed)
+			}
+			syncHead := syncBranch.head()
+
+			gotEnded, gotReplay, err := db.MaybeEndSync(syncHead.Original.Hash())
+
+			assert.Equal(tt.expEnded, gotEnded, tt.name)
+			if tt.expErr != "" {
+				assert.Error(err)
+				if err != nil {
+					assert.Regexp(tt.expErr, err.Error(), tt.name)
+				}
+				assert.False(gotEnded)
+			} else {
+				assert.NoError(err, tt.name)
+				assert.Equal(len(tt.expReplayIds), len(gotReplay), tt.name)
+				if len(tt.expReplayIds) == len(gotReplay) {
+					for i, mutationID := range tt.expReplayIds {
+						assert.True(int(mutationID) < len(master))
+						assert.Equal(master[mutationID].Meta.Local.Name, gotReplay[i].Name)
+						gotArgs, err := nomsjson.FromJSON(bytes.NewReader(gotReplay[i].Args), db.noms)
+						assert.NoError(err)
+						assert.True(master[mutationID].Meta.Local.Args.Equals(gotArgs))
+					}
+				}
+			}
+			if tt.expEnded {
+				assert.True(syncHead.Original.Equals(db.head.Original))
+			} else {
+				assert.True(master.head().Original.Equals(db.head.Original))
+			}
+		})
+	}
 }

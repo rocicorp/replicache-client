@@ -69,7 +69,6 @@ type delResponse struct {
 	Ok bool `json:"ok"`
 }
 
-
 type beginSyncRequest struct {
 	BatchPushURL  string `json:"batchPushURL"`
 	ClientViewURL string `json:"clientViewURL"`
@@ -81,6 +80,15 @@ type beginSyncResponse struct {
 	SyncInfo  db.SyncInfo `json:"syncInfo,omitempty"`
 	PushError *syncError  `json:"pushError,omitempty"`
 	PullError *syncError  `json:"pullError,omitempty"`
+}
+
+type maybeEndSyncRequest struct {
+	SyncHead *jsnoms.Hash `json:"syncHead,omitempty"`
+}
+
+type maybeEndSyncResponse struct {
+	Ended           bool          `json:"ended,omitempty"`
+	ReplayMutations []db.Mutation `json:"replayMutations,omitempty"`
 }
 
 type pullRequest struct {

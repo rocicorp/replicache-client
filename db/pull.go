@@ -27,28 +27,15 @@ type PullAuthError struct {
 
 type Progress func(bytesReceived, bytesExpected uint64)
 
-// TODO this should get way simpler
 func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	if c.Type() == CommitTypeSnapshot {
 		return c, nil
 	}
-
-	for p := c; len(p.Parents) > 0; {
-		v := noms.ReadValue(p.Parents[0].TargetHash())
-		if v == nil {
-			return Commit{}, fmt.Errorf("could not find parent %v", p.Parents[0].TargetHash())
-		} else {
-			err := marshal.Unmarshal(v, &p)
-			if err != nil {
-				return Commit{}, fmt.Errorf("Error: Parent is not a commit: %#v", types.EncodedValue(v))
-			}
-		}
-		if p.Type() == CommitTypeSnapshot {
-			return p, nil
-		}
+	basis, err := c.Basis(noms)
+	if err != nil {
+		return Commit{}, fmt.Errorf("could not find base snapshot of %v: %w", c.Original.Hash(), err)
 	}
-
-	return Commit{}, fmt.Errorf("could not find base snapshot of %v", c)
+	return baseSnapshot(noms, basis)
 }
 
 const sandboxAuthorization = "sandbox"
