@@ -10,3 +10,4 @@ repm/repm.aar
 repm/Repm.framework
 vendor
 .DS_Store
+/test_server
