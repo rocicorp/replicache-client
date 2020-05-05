@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,4 +95,27 @@ func TestLoadBadSpec(t *testing.T) {
 	db, err = Load(sp)
 	assert.Nil(db)
 	assert.EqualError(err, "Unexpected response: Not Found: 404 page not found")
+}
+
+func TestConflictingCommits(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+
+	tx1 := db.NewTransaction()
+	err := tx1.Put("a", []byte("1"))
+	assert.NoError(err)
+
+	tx2 := db.NewTransaction()
+	err = tx2.Put("b", []byte("2"))
+	assert.NoError(err)
+
+	ref1, err := tx1.Commit()
+	assert.NoError(err)
+	assert.False(ref1.IsZeroValue())
+
+	ref2, err := tx2.Commit()
+	assert.Error(err)
+	var commitErrror CommitError
+	assert.True(errors.As(err, &commitErrror))
+	assert.True(ref2.IsZeroValue())
 }

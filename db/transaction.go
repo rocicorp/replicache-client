@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 
+	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/types"
 
 	"roci.dev/diff-server/kv"
@@ -204,6 +206,11 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 	defer tx.db.lock()()
 	_, err = tx.db.noms.FastForward(tx.db.noms.GetDataset(LOCAL_DATASET), ref)
 	if err != nil {
+		if !errors.Is(err, datas.ErrMergeNeeded) && !errors.Is(err, datas.ErrOptimisticLockFailed) {
+			log.Printf("Unexpected error from FastForward: %s", err)
+		}
+		err = NewCommitError(err)
+		ref = types.Ref{}
 		return
 	}
 	tx.db.head = commit

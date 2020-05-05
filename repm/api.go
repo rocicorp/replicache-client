@@ -357,10 +357,17 @@ func (conn *connection) dispatchCommitTransaction(reqBytes []byte) ([]byte, erro
 	}
 	conn.removeTransaction(req.TransactionID)
 	commitRef, err := tx.Commit()
-	if err != nil {
-		return nil, err
-	}
+
 	res := commitTransactionResponse{}
+
+	if err != nil {
+		var commitErr db.CommitError
+		if !errors.As(err, &commitErr) {
+			return nil, err
+		}
+		res.RetryCommit = true
+	}
+
 	if !commitRef.IsZeroValue() {
 		res.Ref = &jsnoms.Hash{
 			Hash: commitRef.TargetHash(),
