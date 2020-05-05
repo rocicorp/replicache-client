@@ -15,7 +15,7 @@ func TestEditorRoundtrip(t *testing.T) {
 	db, err := Load(sp)
 	assert.NoError(err)
 
-	ed := &editor{noms: db.Noms(), data: db.head.Data(db.Noms()).NomsMap().Edit()}
+	ed := &editor{noms: db.Noms(), data: db.Head().Data(db.Noms()).NomsMap().Edit()}
 
 	assert.False(ed.Has("foo"))
 	v, err := ed.Get("foo")
@@ -69,7 +69,7 @@ func TestEditorMutationAttempt(t *testing.T) {
 	for i, t := range tc {
 		ed = &editor{
 			noms: db.Noms(),
-			data: db.head.Data(db.Noms()).NomsMap().Edit(),
+			data: db.Head().Data(db.Noms()).NomsMap().Edit(),
 		}
 		assert.False(ed.receivedMutAttempt, "test case %d: %#v", i, t.f)
 		t.f()

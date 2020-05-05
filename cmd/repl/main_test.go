@@ -278,7 +278,7 @@ func TestDrop(t *testing.T) {
 		sp, err := spec.ForDatabase(dir)
 		assert.NoError(err)
 		noms := sp.GetDatabase()
-		ds := noms.GetDataset(db.LOCAL_DATASET)
+		ds := noms.GetDataset(db.MASTER_DATASET)
 		assert.Equal(!t.deleted, ds.HasHead())
 	}
 }

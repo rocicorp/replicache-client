@@ -17,22 +17,21 @@ import (
 
 	"roci.dev/diff-server/kv"
 	jsnoms "roci.dev/diff-server/util/noms/json"
-	"roci.dev/diff-server/util/time"
 )
 
 const (
-	LOCAL_DATASET  = "local"
+	MASTER_DATASET = "master"
 	REMOTE_DATASET = "remote"
 )
 
 type DB struct {
 	noms     datas.Database
-	head     Commit
 	clientID string
-	mu       sync.Mutex
+	pusher   pusher
+	puller   puller
 
-	pusher pusher
-	puller puller
+	mu   sync.Mutex
+	head Commit
 }
 
 func Load(sp spec.Spec) (*DB, error) {
@@ -57,8 +56,9 @@ func New(noms datas.Database) (*DB, error) {
 		pusher: defaultPusher{},
 		puller: defaultPuller{},
 	}
+	// Of course nothing could have a handle on r yet, but still good practice.
 	defer r.lock()()
-	err := r.init()
+	err := r.initLocked()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,8 @@ func New(noms datas.Database) (*DB, error) {
 	return &r, nil
 }
 
-func (db *DB) init() error {
+// initLocked initializes the DB for use. The mutex must be held when called.
+func (db *DB) initLocked() error {
 	var err error
 
 	cid := db.clientID
@@ -78,8 +79,9 @@ func (db *DB) init() error {
 	if err != nil {
 		return err
 	}
+	db.clientID = cid
 
-	ds := db.noms.GetDataset(LOCAL_DATASET)
+	ds := db.noms.GetDataset(MASTER_DATASET)
 	if !ds.HasHead() {
 		m := kv.NewMap(db.noms)
 		genesis := makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0 /*lastMutationID*/)
@@ -88,7 +90,6 @@ func (db *DB) init() error {
 		if err != nil {
 			return err
 		}
-		db.clientID = cid
 		db.head = genesis
 		return nil
 	}
@@ -103,8 +104,6 @@ func (db *DB) init() error {
 	if err != nil {
 		return err
 	}
-
-	db.clientID = cid
 	db.head = head
 	return nil
 }
@@ -114,7 +113,23 @@ func (db *DB) Noms() types.ValueReadWriter {
 }
 
 func (db *DB) Head() Commit {
+	defer db.lock()()
 	return db.head
+}
+
+// setHead sets the head commit to newHead and fast-forwards the underlying dataset.
+func (db *DB) setHead(newHead Commit) error {
+	defer db.lock()()
+	_, err := db.noms.FastForward(db.noms.GetDataset(MASTER_DATASET), newHead.Ref())
+	if err != nil {
+		return err
+	}
+	db.head = newHead
+	return nil
+}
+
+func (db *DB) HeadHash() hash.Hash {
+	return db.Head().NomsStruct.Hash()
 }
 
 func (db *DB) RemoteHead() (c Commit, err error) {
@@ -129,40 +144,10 @@ func (db *DB) RemoteHead() (c Commit, err error) {
 	return
 }
 
-func (db *DB) Hash() hash.Hash {
-	return db.head.NomsStruct.Hash()
-}
-
 func (db *DB) Reload() error {
 	defer db.lock()()
 	db.noms.Rebase()
-	return db.init()
-}
-
-func (db *DB) execInternal(function string, args types.List) (types.Value, error) {
-	head := db.Head()
-	basis := head.Ref()
-	newData, newDataChecksum, output, isWrite, err := db.execImpl(basis, function, args)
-	if err != nil {
-		return nil, err
-	}
-
-	// Do not add commits for read-only transactions.
-	if !isWrite {
-		return output, nil
-	}
-
-	commit := makeLocal(db.noms, basis, time.DateTime(), head.NextMutationID(), function, args, newData, newDataChecksum)
-	commitRef := db.noms.WriteValue(commit.NomsStruct)
-
-	// FastForward not strictly needed here because we should have already ensured that we were
-	// fast-forwarding outside of Noms, but it's a nice sanity check.
-	_, err = db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), commitRef)
-	if err != nil {
-		return nil, err
-	}
-	db.head = commit
-	return output, nil
+	return db.initLocked()
 }
 
 // TODO: add date and random source to this so that sync can set it up correctly when replaying.

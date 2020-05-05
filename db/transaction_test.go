@@ -13,7 +13,7 @@ import (
 )
 
 func assertDataEquals(assert *assert.Assertions, db *DB, expr string) {
-	valueRef := db.head.Value.Data
+	valueRef := db.Head().Value.Data
 	expectedValue := nomdl.MustParse(db.Noms(), expr)
 	if !valueRef.Equals(types.NewRef(expectedValue)) {
 		value := valueRef.TargetValue(db.Noms())
@@ -259,7 +259,7 @@ func TestReplayWriteTransaction(t *testing.T) {
 	db, _ := LoadTempDB(assert)
 	d := datetime.Now()
 
-	master := testCommits{db.head}
+	master := testCommits{db.Head()}
 	master.addLocal(assert, db, d)
 	sync := testCommits{master.genesis()}
 	sync.addSnapshot(assert, db)
@@ -292,12 +292,12 @@ func TestReplayWriteTransaction(t *testing.T) {
 	expChecksum := e.Build().Checksum()
 
 	for _, tt := range tests {
-		head := db.head
+		head := db.Head()
 		tx := db.NewTransactionWithArgs(tt.original.Meta.Local.Name, tt.original.Meta.Local.Args, &tt.basis, &tt.original)
 		assert.True(tx.IsReplay())
 		assert.NoError(tx.Put("key", []byte("true")))
 		gotRef, err := tx.Commit()
-		assert.True(db.head.NomsStruct.Equals(head.NomsStruct))
+		assert.True(db.Head().NomsStruct.Equals(head.NomsStruct))
 		if tt.expError != "" {
 			assert.Error(err)
 			assert.Regexp(tt.expError, err.Error())

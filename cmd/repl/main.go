@@ -332,7 +332,7 @@ func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 			return err
 		}
 		noms := sp.GetDatabase()
-		_, err = noms.Delete(noms.GetDataset(db.LOCAL_DATASET))
+		_, err = noms.Delete(noms.GetDataset(db.MASTER_DATASET))
 		return err
 	})
 }

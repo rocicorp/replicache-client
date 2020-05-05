@@ -111,9 +111,7 @@ func TestDB_BeginSync(t *testing.T) {
 			for i := 0; i < tt.numLocals; i++ {
 				commits.addLocal(assert, db, d)
 			}
-			db.head = commits.head()
-			_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), db.head.Ref())
-			assert.NoError(err)
+			assert.NoError(db.setHead(commits.head()))
 
 			syncSnapshot = makeSnapshot(db.noms, commits.genesis().Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
 			// Ensure it is not saved so we can check that it is by sync.
@@ -277,16 +275,14 @@ func TestDB_MaybeEndSync(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db, _ := LoadTempDB(assert)
 			var master testCommits
-			master = append(master, db.head)
+			master = append(master, db.Head())
 			for i := 0; i < tt.numPending; i++ {
 				master.addLocal(assert, db, d)
 			}
 			if tt.interveningSync {
 				master.addSnapshot(assert, db)
 			}
-			db.head = master.head()
-			_, err := db.noms.FastForward(db.noms.GetDataset(LOCAL_DATASET), db.head.Ref())
-			assert.NoError(err)
+			assert.NoError(db.setHead(master.head()))
 
 			syncBranch := testCommits{master.genesis()}
 			syncBranch.addSnapshot(assert, db)
@@ -325,9 +321,9 @@ func TestDB_MaybeEndSync(t *testing.T) {
 				}
 			}
 			if tt.expEnded {
-				assert.True(syncHead.NomsStruct.Equals(db.head.NomsStruct))
+				assert.True(syncHead.NomsStruct.Equals(db.Head().NomsStruct))
 			} else {
-				assert.True(master.head().NomsStruct.Equals(db.head.NomsStruct))
+				assert.True(master.head().NomsStruct.Equals(db.Head().NomsStruct))
 			}
 		})
 	}

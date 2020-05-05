@@ -7,9 +7,24 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
+	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 )
+
+func TestGetSetHead(t *testing.T) {
+	assert := assert.New(t)
+	db, _ := LoadTempDB(assert)
+	var commits testCommits
+	genesis := db.Head()
+	commits = append(commits, genesis)
+	commits.addLocal(assert, db, datetime.Now())
+
+	assert.NoError(db.setHead(commits.head()))
+	assert.True(db.Head().NomsStruct.Equals(commits.head().NomsStruct))
+	assert.NoError(db.Reload())
+	assert.True(db.Head().NomsStruct.Equals(commits.head().NomsStruct))
+}
 
 func reloadDB(assert *assert.Assertions, dir string) (db *DB) {
 	sp, err := spec.ForDatabase(dir)
@@ -32,7 +47,7 @@ func TestGenesis(t *testing.T) {
 	assert.Nil(v)
 	assert.NoError(err)
 	m := kv.NewMap(db.noms)
-	assert.True(db.head.NomsStruct.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0).NomsStruct))
+	assert.True(db.Head().NomsStruct.Equals(makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0).NomsStruct))
 
 	cid := db.clientID
 	assert.NotEqual("", cid)

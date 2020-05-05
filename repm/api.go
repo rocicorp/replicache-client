@@ -62,7 +62,7 @@ func (conn *connection) dispatchGetRoot(reqBytes []byte) ([]byte, error) {
 
 	res := getRootResponse{
 		Root: jsnoms.Hash{
-			Hash: conn.db.Hash(),
+			Hash: conn.db.HeadHash(),
 		},
 	}
 	return mustMarshal(res), nil
@@ -238,7 +238,7 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 		return nil, err
 	}
 	res.Root = jsnoms.Hash{
-		Hash: conn.db.Hash(),
+		Hash: conn.db.HeadHash(),
 	}
 
 	if clientViewInfo.HTTPStatusCode == http.StatusUnauthorized {

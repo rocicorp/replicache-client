@@ -14,7 +14,6 @@ import (
 	"roci.dev/diff-server/util/chk"
 	"roci.dev/diff-server/util/countingreader"
 
-	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/verbose"
@@ -43,7 +42,7 @@ const sandboxAuthorization = "sandbox"
 // Pull pulls new server state from the client side.
 // This function is doomed; the full implementation of sync will use pull() below.
 func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (servetypes.ClientViewInfo, error) {
-	genesis, err := baseSnapshot(db.noms, db.head)
+	genesis, err := baseSnapshot(db.noms, db.Head())
 	if err != nil {
 		return servetypes.ClientViewInfo{}, err
 	}
@@ -136,9 +135,8 @@ func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (
 		return pullResp.ClientViewInfo, fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum, patchedMap.Checksum())
 	}
 	newHead := makeSnapshot(db.noms, genesis.Ref(), pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), patchedMap.NomsChecksum(), pullResp.LastMutationID)
-	db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, newHead)))
-
-	return pullResp.ClientViewInfo, db.init()
+	db.noms.WriteValue(newHead.NomsStruct)
+	return pullResp.ClientViewInfo, db.setHead(newHead)
 }
 
 type puller interface {

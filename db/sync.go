@@ -65,8 +65,8 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 		return false, []Mutation{}, err
 	}
 
-	db.lock()
-	defer db.mu.Unlock()
+	defer db.lock()()
+	head := db.head
 
 	// Stop if someone landed a sync since this sync started.
 	syncSnapshot, err := baseSnapshot(db.noms, syncHeadCommit)
@@ -77,7 +77,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	if err != nil {
 		return false, []Mutation{}, err
 	}
-	headSnapshot, err := baseSnapshot(db.noms, db.head)
+	headSnapshot, err := baseSnapshot(db.noms, head)
 	if err != nil {
 		return false, []Mutation{}, err
 	}
@@ -86,7 +86,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	}
 
 	// Determine if there are any pending mutations that we need to replay.
-	pendingCommits, err := pendingCommits(db.noms, db.head)
+	pendingCommits, err := pendingCommits(db.noms, head)
 	if err != nil {
 		return false, []Mutation{}, err
 	}
@@ -111,7 +111,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	// TODO check invariants from synchead back to syncsnapshot.
 
 	// Sync is complete. Can't ffwd because sync head is dangling.
-	_, err = db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), syncHeadCommit.Ref())
+	_, err = db.noms.SetHead(db.noms.GetDataset(MASTER_DATASET), syncHeadCommit.Ref())
 	if err != nil {
 		return false, []Mutation{}, err
 	}

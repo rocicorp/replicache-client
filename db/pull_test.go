@@ -300,7 +300,7 @@ func TestPull(t *testing.T) {
 		}
 		m := ed.Build()
 		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 1 /*lastMutationID*/)
-		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(g.NomsStruct))
+		_, err := db.noms.SetHead(db.noms.GetDataset(MASTER_DATASET), db.noms.WriteValue(g.NomsStruct))
 		assert.NoError(err)
 		err = db.Reload()
 		assert.NoError(err, t.label)
@@ -610,7 +610,7 @@ func TestDoomedDBPull(t *testing.T) {
 		}
 		m := ed.Build()
 		g := makeGenesis(db.noms, t.initialStateID, db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 1 /*lastMutationID*/)
-		_, err := db.noms.SetHead(db.noms.GetDataset(LOCAL_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, g)))
+		_, err := db.noms.SetHead(db.noms.GetDataset(MASTER_DATASET), db.noms.WriteValue(marshal.MustMarshal(db.noms, g)))
 		assert.NoError(err)
 		err = db.Reload()
 		assert.NoError(err, t.label)
@@ -652,13 +652,13 @@ func TestDoomedDBPull(t *testing.T) {
 			assert.NoError(ee.Set(types.String(k), v), t.label)
 		}
 		expected := ee.Build()
-		gotChecksum, err := kv.ChecksumFromString(string(db.head.Value.Checksum))
+		gotChecksum, err := kv.ChecksumFromString(string(db.Head().Value.Checksum))
 		assert.NoError(err)
 		assert.Equal(expected.Checksum(), gotChecksum.String(), t.label)
 
 		if t.expectedError == "" {
-			assert.Equal(t.expectedBaseServerStateID, db.head.Meta.Snapshot.ServerStateID, t.label)
-			assert.Equal(t.expectedLastMutationID, db.head.Meta.Snapshot.LastMutationID, t.label)
+			assert.Equal(t.expectedBaseServerStateID, db.Head().Meta.Snapshot.ServerStateID, t.label)
+			assert.Equal(t.expectedLastMutationID, db.Head().Meta.Snapshot.LastMutationID, t.label)
 		}
 	}
 }

@@ -48,7 +48,7 @@ func TestRebase(t *testing.T) {
 		assert.Fail("Commits are unequal", "expected: %s, actual: %s, diff: %s", c1.NomsStruct.Hash(), c2.NomsStruct.Hash(), diff.Diff(c1.NomsStruct, c2.NomsStruct))
 	}
 
-	g := db.head
+	g := db.Head()
 	epoch := datetime.DateTime{}
 
 	tx := func(basis Commit, arg string, ds string) Commit {
@@ -106,7 +106,7 @@ func TestRebase(t *testing.T) {
 	// rslt:  g - a
 	(func() {
 		a := tx(g, "a", "a")
-		_, err := noms.SetHead(noms.GetDataset(LOCAL_DATASET), a.Ref())
+		_, err := noms.SetHead(noms.GetDataset(MASTER_DATASET), a.Ref())
 		assert.NoError(err)
 		db.Reload()
 		test(g, a, a, "")

@@ -201,20 +201,15 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 	// TODO ensure name is not empty!
 	commit = makeLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
 	ref = tx.db.noms.WriteValue(commit.NomsStruct)
-
-	// Lock the db here to ensure we update the db.head atomically with the fast forward.
-	defer tx.db.lock()()
-	_, err = tx.db.noms.FastForward(tx.db.noms.GetDataset(LOCAL_DATASET), ref)
-	if err != nil {
-		if !errors.Is(err, datas.ErrMergeNeeded) && !errors.Is(err, datas.ErrOptimisticLockFailed) {
-			log.Printf("Unexpected error from FastForward: %s", err)
-		}
-		err = NewCommitError(err)
-		ref = types.Ref{}
+	err = tx.db.setHead(commit)
+	if err == nil {
 		return
 	}
-	tx.db.head = commit
-
+	if !errors.Is(err, datas.ErrMergeNeeded) && !errors.Is(err, datas.ErrOptimisticLockFailed) {
+		log.Printf("Unexpected error from FastForward: %s", err)
+	}
+	err = NewCommitError(err)
+	ref = types.Ref{}
 	return
 }
 
