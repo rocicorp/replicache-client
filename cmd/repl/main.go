@@ -21,7 +21,6 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"roci.dev/diff-server/util/chk"
-	"roci.dev/diff-server/util/kp"
 	rlog "roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/tbl"
@@ -143,7 +142,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	scan(app, getDB, out, errs)
 	put(app, getDB, in)
 	del(app, getDB, out)
-	sync(app, getDB)
 	drop(app, getSpec, in, out)
 	logCmd(app, getDB, out)
 
@@ -290,23 +288,6 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 		} else {
 			tx.Close()
 		}
-		return err
-	})
-}
-
-func sync(parent *kingpin.Application, gdb gdb) {
-	kc := parent.Command("sync", "Sync with a this client server.")
-	clientViewAuth := kc.Flag("client-view-auth", "Client view authorization sent to the data layer.").Default("").String()
-	remoteSpec := kp.DatabaseSpec(kc.Arg("remote", "Server to sync with. See https://github.com/attic-labs/noms/blob/master/doc/spelling.md#spelling-databases.").Required())
-
-	kc.Action(func(_ *kingpin.ParseContext) error {
-		db, err := gdb()
-		if err != nil {
-			return err
-		}
-
-		// TODO: progress
-		_, err = db.Pull(*remoteSpec, *clientViewAuth, nil)
 		return err
 	})
 }
