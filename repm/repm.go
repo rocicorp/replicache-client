@@ -116,7 +116,9 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	case "del":
 		return conn.dispatchDel(data)
 	case "beginSync":
-		return conn.dispatchBeginSync(data)		
+		return conn.dispatchBeginSync(data)
+	case "maybeEndSync":
+		return conn.dispatchMaybeEndSync(data)
 	case "pull":
 		return conn.dispatchPull(data)
 	case "pullProgress":
