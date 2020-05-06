@@ -12,8 +12,8 @@ import (
 )
 
 type SyncInfo struct {
-	BatchPushInfo  BatchPushInfo
-	ClientViewInfo servetypes.ClientViewInfo
+	BatchPushInfo  BatchPushInfo             `json:"batchPushInfo"`
+	ClientViewInfo servetypes.ClientViewInfo `json:"clientViewInfo"`
 }
 
 // BeginSync pushes pending mutations to the data layer and pulls new state via the client view.
