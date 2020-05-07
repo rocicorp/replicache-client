@@ -319,7 +319,7 @@ func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 }
 
 func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("log", "Displays the history of a this client database.")
+	kc := parent.Command("log", "Displays the history of the database up to but not including the latest Snapshot.")
 	np := kc.Flag("no-pager", "supress paging functionality").Bool()
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -328,11 +328,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			return err
 		}
 		c := d.Head()
-		r, err := d.RemoteHead()
-		if err != nil {
-			return err
-		}
-		inRemote := false
 
 		if !*np {
 			pgr := outputpager.Start()
@@ -345,18 +340,10 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				break
 			}
 
-			if c.NomsStruct.Equals(r.NomsStruct) {
-				inRemote = true
-			}
-
 			initialCommit, err := c.InitalCommit(d.Noms())
 
 			getStatus := func() (r string, mergedTime time.Time) {
-				if inRemote {
-					r = "MERGED"
-				} else {
-					r = "PENDING"
-				}
+				r = "PENDING"
 
 				switch c.Type() {
 				case db.CommitTypeReorder:

@@ -21,7 +21,6 @@ import (
 
 const (
 	MASTER_DATASET = "master"
-	REMOTE_DATASET = "remote"
 )
 
 type DB struct {
@@ -130,18 +129,6 @@ func (db *DB) setHead(newHead Commit) error {
 
 func (db *DB) HeadHash() hash.Hash {
 	return db.Head().NomsStruct.Hash()
-}
-
-func (db *DB) RemoteHead() (c Commit, err error) {
-	ds := db.noms.GetDataset(REMOTE_DATASET)
-	if !ds.HasHead() {
-		// TODO: maybe setup the remote head at startup too.
-		m := kv.NewMap(db.noms)
-		return makeGenesis(db.noms, "", db.noms.WriteValue(m.NomsMap()), m.NomsChecksum(), 0), nil
-
-	}
-	err = marshal.Unmarshal(ds.Head(), &c)
-	return
 }
 
 func (db *DB) Reload() error {
