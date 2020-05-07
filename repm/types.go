@@ -87,8 +87,8 @@ type maybeEndSyncRequest struct {
 }
 
 type maybeEndSyncResponse struct {
-	Ended           bool          `json:"ended,omitempty"`
-	ReplayMutations []db.Mutation `json:"replayMutations,omitempty"`
+	Ended           bool                `json:"ended,omitempty"`
+	ReplayMutations []db.ReplayMutation `json:"replayMutations,omitempty"`
 }
 
 type pullRequest struct {

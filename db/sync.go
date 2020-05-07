@@ -55,14 +55,14 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 	return syncHeadRef.TargetHash(), syncInfo, nil
 }
 
-func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
+func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []ReplayMutation, error) {
 	v := db.Noms().ReadValue(syncHead)
 	if v == nil {
-		return false, []Mutation{}, fmt.Errorf("could not load sync head %s", syncHead)
+		return false, []ReplayMutation{}, fmt.Errorf("could not load sync head %s", syncHead)
 	}
 	var syncHeadCommit Commit
 	if err := marshal.Unmarshal(v, &syncHeadCommit); err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 
 	defer db.lock()()
@@ -71,38 +71,43 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	// Stop if someone landed a sync since this sync started.
 	syncSnapshot, err := baseSnapshot(db.noms, syncHeadCommit)
 	if err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 	syncSnapshotBasis, err := syncSnapshot.Basis(db.noms)
 	if err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 	headSnapshot, err := baseSnapshot(db.noms, head)
 	if err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 	if !syncSnapshotBasis.NomsStruct.Equals(headSnapshot.NomsStruct) {
-		return false, []Mutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
+		return false, []ReplayMutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
 	}
 
 	// Determine if there are any pending mutations that we need to replay.
 	pendingCommits, err := pendingCommits(db.noms, head)
 	if err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 	commitsToReplay := filterIDsLessThanOrEqualTo(pendingCommits, syncHeadCommit.MutationID())
-	var replay []Mutation
+	var replay []ReplayMutation
 	if len(commitsToReplay) > 0 {
 		for _, c := range commitsToReplay {
 			var args bytes.Buffer
 			err = nomsjson.ToJSON(c.Meta.Local.Args, &args)
 			if err != nil {
-				return false, []Mutation{}, err
+				return false, []ReplayMutation{}, err
 			}
-			replay = append(replay, Mutation{
-				ID:   c.MutationID(),
-				Name: string(c.Meta.Local.Name),
-				Args: args.Bytes(),
+			replay = append(replay, ReplayMutation{
+				Mutation{
+					ID:   c.Meta.Local.MutationID,
+					Name: string(c.Meta.Local.Name),
+					Args: args.Bytes(),
+				},
+				&nomsjson.Hash{
+					Hash: c.Ref().TargetHash(),
+				},
 			})
 		}
 		return false, replay, nil
@@ -113,11 +118,11 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []Mutation, error) {
 	// Sync is complete. Can't ffwd because sync head is dangling.
 	_, err = db.noms.SetHead(db.noms.GetDataset(MASTER_DATASET), syncHeadCommit.Ref())
 	if err != nil {
-		return false, []Mutation{}, err
+		return false, []ReplayMutation{}, err
 	}
 	db.head = syncHeadCommit
 
-	return true, []Mutation{}, nil
+	return true, []ReplayMutation{}, nil
 }
 
 // Assumes commits are in ascending order of mutation id.

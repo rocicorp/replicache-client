@@ -317,6 +317,7 @@ func TestDB_MaybeEndSync(t *testing.T) {
 						gotArgs, err := nomsjson.FromJSON(bytes.NewReader(gotReplay[i].Args), db.noms)
 						assert.NoError(err)
 						assert.True(master[mutationID].Meta.Local.Args.Equals(gotArgs))
+						assert.Equal(master[mutationID].Ref().TargetHash(), gotReplay[i].Original.Hash)
 					}
 				}
 			}

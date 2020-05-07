@@ -10,7 +10,6 @@ import (
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
-
 type BatchPushRequest struct {
 	ClientID  string     `json:"clientId"`
 	Mutations []Mutation `json:"mutations"`
@@ -21,6 +20,11 @@ type Mutation struct {
 	ID   uint64          `json:"id"`
 	Name string          `json:"name"`
 	Args json.RawMessage `json:"args"`
+}
+
+type ReplayMutation struct {
+	Mutation
+	Original *nomsjson.Hash `json:"original,omitempty"`
 }
 
 type BatchPushResponse struct {
