@@ -323,7 +323,7 @@ func TestPull(t *testing.T) {
 			server.Close()
 		}
 
-		gotSnapshot, cvi, err := pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), clientViewAuth, db.clientID)
+		gotSnapshot, cvi, err := defaultPuller{}.Pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), clientViewAuth, db.clientID)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			assert.NotEqual(Commit{}, gotSnapshot)

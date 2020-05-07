@@ -145,13 +145,9 @@ type puller interface {
 
 type defaultPuller struct{}
 
-func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
-	return pull(noms, baseState, url, clientViewAuth, clientID)
-}
-
 // Pull pulls new server state from the client view via the diffserver.
 // TODO pass in auth (sandbox is hardcoded)
-func pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
 	baseMap := baseState.Data(noms)
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		ClientViewAuth: clientViewAuth,
