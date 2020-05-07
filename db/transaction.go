@@ -217,7 +217,7 @@ func ValidateReplayParams(original Commit, name string, args types.Value, mutati
 		return fmt.Errorf("only local mutations can be replayed; %s is a %v", original.NomsStruct.Hash().String(), original.Type())
 	}
 	if name != original.Meta.Local.Name {
-		return fmt.Errorf("invalid replay: Names do not match")
+		return fmt.Errorf(`invalid replay: Names do not match, got "%s", expected "%s"`, name, original.Meta.Local.Name)
 	}
 	if !args.Equals(original.Meta.Local.Args) {
 		return fmt.Errorf("invalid replay: Args do not match")
