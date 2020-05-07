@@ -118,8 +118,8 @@ type openTransactionRequest struct {
 }
 
 type rebaseOpts struct {
-	Basis    *jsnoms.Hash
-	Original *jsnoms.Hash
+	Basis    *jsnoms.Hash `json:"basis"`
+	Original *jsnoms.Hash `json:"original"`
 }
 
 type openTransactionResponse struct {
