@@ -198,7 +198,6 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 		return
 	}
 
-	// TODO ensure name is not empty!
 	commit = makeLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
 	ref = tx.db.noms.WriteValue(commit.NomsStruct)
 	err = tx.db.setHead(commit)
