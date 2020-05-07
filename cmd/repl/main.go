@@ -269,7 +269,7 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 }
 
 func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("del", "Deletes an item from the database.")
+	kc := parent.Command("del", "Deletes an item from the cache.")
 	id := kc.Arg("id", "id of the value to delete").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
 		db, err := gdb()
@@ -293,7 +293,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 }
 
 func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
-	kc := parent.Command("drop", "Deletes a this client database and its history.")
+	kc := parent.Command("drop", "Removes all entries from the cache and deletes its history.")
 
 	r := bufio.NewReader(in)
 	w := bufio.NewWriter(out)
@@ -319,7 +319,7 @@ func drop(parent *kingpin.Application, gsp gsp, in io.Reader, out io.Writer) {
 }
 
 func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
-	kc := parent.Command("log", "Displays the history of the database up to but not including the latest Snapshot.")
+	kc := parent.Command("log", "Displays the recent history of the cache.")
 	np := kc.Flag("no-pager", "supress paging functionality").Bool()
 
 	kc.Action(func(_ *kingpin.ParseContext) error {
