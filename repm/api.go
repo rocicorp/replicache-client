@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/hash"
 	"roci.dev/diff-server/util/chk"
@@ -19,7 +18,6 @@ type connection struct {
 	dir                string
 	db                 *db.DB
 	sp                 pullProgress
-	pulling            int32
 	transactions       map[int]*db.Transaction
 	transactionCounter int
 	transactionMutex   sync.RWMutex
@@ -208,12 +206,6 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if !atomic.CompareAndSwapInt32(&conn.pulling, 0, 1) {
-		return nil, errors.New("There is already a pull in progress")
-	}
-
-	defer chk.True(atomic.CompareAndSwapInt32(&conn.pulling, 1, 0), "UNEXPECTED STATE: Overlapping pulls somehow!")
 
 	res := pullResponse{}
 	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
