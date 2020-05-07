@@ -183,17 +183,6 @@ func (conn *connection) dispatchBeginSync(reqBytes []byte) ([]byte, error) {
 		SyncHead: jsnoms.Hash{Hash: syncHead},
 		SyncInfo: syncInfo,
 	}
-	if syncInfo.BatchPushInfo.HTTPStatusCode == http.StatusUnauthorized {
-		res.PushError = &syncError{
-			BadAuth: syncInfo.BatchPushInfo.ErrorMessage,
-		}
-	}
-	if syncInfo.ClientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
-		res.PullError = &syncError{
-			BadAuth: syncInfo.ClientViewInfo.ErrorMessage,
-		}
-	}
-
 	return mustMarshal(res), nil
 }
 

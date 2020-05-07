@@ -78,8 +78,6 @@ type beginSyncRequest struct {
 type beginSyncResponse struct {
 	SyncHead  jsnoms.Hash `json:"syncHead,omitempty"`
 	SyncInfo  db.SyncInfo `json:"syncInfo,omitempty"`
-	PushError *syncError  `json:"pushError,omitempty"`
-	PullError *syncError  `json:"pullError,omitempty"`
 }
 
 type maybeEndSyncRequest struct {
@@ -103,10 +101,6 @@ type pullResponseError struct {
 type pullResponse struct {
 	Error *pullResponseError `json:"error,omitempty"`
 	Root  jsnoms.Hash        `json:"root,omitempty"`
-}
-
-type syncError struct {
-	BadAuth string `json:"badAuth"`
 }
 
 type pullProgressRequest struct {
