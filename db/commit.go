@@ -51,7 +51,7 @@ type Local struct {
 	Date       datetime.DateTime
 	Name       string
 	Args       types.Value
-	Original   hash.Hash
+	Original   types.Ref `noms:",omitempty"`
 }
 
 type Reorder struct {
@@ -160,10 +160,10 @@ func (c Commit) Target() types.Ref {
 }
 
 func (c Commit) Original(noms types.ValueReadWriter) (Commit, error) {
-	if c.Meta.Local.Original.IsEmpty() {
+	if c.Meta.Local.Original.IsZeroValue() {
 		return Commit{}, nil
 	}
-	return ReadCommit(noms, c.Meta.Local.Original)
+	return ReadCommit(noms, c.Meta.Local.Original.TargetHash())
 }
 
 func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
@@ -304,14 +304,14 @@ func makeLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime,
 	return c
 }
 
-func makeReplayedLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, mutationID uint64, f string, args types.Value, newData types.Ref, checksum types.String, original Commit) Commit {
+func makeReplayedLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, mutationID uint64, f string, args types.Value, newData types.Ref, checksum types.String, original types.Ref) Commit {
 	c := Commit{}
 	c.Parents = []types.Ref{basis}
 	c.Meta.Local.MutationID = mutationID
 	c.Meta.Local.Date = d
 	c.Meta.Local.Name = f
 	c.Meta.Local.Args = args
-	c.Meta.Local.Original = original.NomsStruct.Hash()
+	c.Meta.Local.Original = original
 	c.Value.Data = newData
 	c.Value.Checksum = checksum
 	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)

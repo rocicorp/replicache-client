@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/chunks"
-	"github.com/attic-labs/noms/go/hash"
 	"github.com/attic-labs/noms/go/marshal"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
@@ -71,7 +70,6 @@ func TestMarshal(t *testing.T) {
 					"date":       marshal.MustMarshal(noms, d),
 					"name":       types.String("func"),
 					"args":       args,
-					"original":   marshal.MustMarshal(noms, hash.Hash{}),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -88,7 +86,6 @@ func TestMarshal(t *testing.T) {
 					"date":       marshal.MustMarshal(noms, d),
 					"name":       types.String("func"),
 					"args":       args,
-					"original":   marshal.MustMarshal(noms, hash.Hash{}),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,
@@ -97,7 +94,7 @@ func TestMarshal(t *testing.T) {
 			}),
 		},
 		{
-			makeReplayedLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum, tx),
+			makeReplayedLocal(noms, g.Ref(), d, g.NextMutationID(), "func", args, drRef, drChecksum, tx.Ref()),
 			types.NewStruct("Commit", types.StructData{
 				"parents": types.NewSet(noms, g.Ref()),
 				"meta": types.NewStruct("Local", types.StructData{
@@ -105,7 +102,7 @@ func TestMarshal(t *testing.T) {
 					"date":       marshal.MustMarshal(noms, d),
 					"name":       types.String("func"),
 					"args":       args,
-					"original":   marshal.MustMarshal(noms, tx.Ref().TargetHash()),
+					"original":   tx.Ref(),
 				}),
 				"value": types.NewStruct("", types.StructData{
 					"data":     drRef,

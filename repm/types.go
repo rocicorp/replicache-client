@@ -76,16 +76,17 @@ type beginSyncRequest struct {
 }
 
 type beginSyncResponse struct {
-	SyncHead  jsnoms.Hash `json:"syncHead,omitempty"`
-	SyncInfo  db.SyncInfo `json:"syncInfo,omitempty"`
+	SyncHead jsnoms.Hash `json:"syncHead,omitempty"`
+	SyncInfo db.SyncInfo `json:"syncInfo,omitempty"`
 }
 
 type maybeEndSyncRequest struct {
 	SyncHead *jsnoms.Hash `json:"syncHead,omitempty"`
 }
 
+// Sync is complete when there are zero replay mutations and
+// no error (returned separately by the api).
 type maybeEndSyncResponse struct {
-	Ended           bool                `json:"ended,omitempty"`
 	ReplayMutations []db.ReplayMutation `json:"replayMutations,omitempty"`
 }
 

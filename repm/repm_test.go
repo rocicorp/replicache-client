@@ -62,7 +62,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 1}`))
-		assert.Equal(`{"ref":"eft96l0n1os3dbmjga6n59pblc00roj9"}`, s(resp))
+		assert.Equal(`{"ref":"hafgie633fm1pg70olfum414ossa6mt6"}`, s(resp))
 		assert.NoError(err)
 
 	}
@@ -89,7 +89,7 @@ func TestBasic(t *testing.T) {
 		assert.Equal(`{"ok":true}`, s(resp))
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 3}`))
-		assert.Equal(`{"ref":"7j3fnssrq52j3slc16tda18fbuf92din"}`, s(resp))
+		assert.Equal(`{"ref":"scdocfjblr16bbcumpnhb7cut1lg5a7s"}`, s(resp))
 		assert.NoError(err)
 	}
 
@@ -116,7 +116,7 @@ func TestBasic(t *testing.T) {
 		assert.NoError(err)
 
 		resp, err = Dispatch("db1", "commitTransaction", []byte(`{"transactionId": 5}`))
-		assert.Equal(`{"ref":"uddikm6s914n37k9fst61kmofgtu9aj4"}`, s(resp))
+		assert.Equal(`{"ref":"0e31ieoihmure8b4j0m3ssij8of2qi54"}`, s(resp))
 		assert.NoError(err)
 
 		assert.Equal("put-something", connections["db1"].db.Head().Meta.Local.Name)

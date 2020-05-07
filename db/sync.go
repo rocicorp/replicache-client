@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/attic-labs/noms/go/hash"
-	"github.com/attic-labs/noms/go/marshal"
 	servetypes "roci.dev/diff-server/serve/types"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
@@ -55,40 +54,45 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 	return syncHeadRef.TargetHash(), syncInfo, nil
 }
 
-func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []ReplayMutation, error) {
-	v := db.Noms().ReadValue(syncHead)
-	if v == nil {
-		return false, []ReplayMutation{}, fmt.Errorf("could not load sync head %s", syncHead)
-	}
-	var syncHeadCommit Commit
-	if err := marshal.Unmarshal(v, &syncHeadCommit); err != nil {
-		return false, []ReplayMutation{}, err
+func (db *DB) MaybeEndSync(syncHead hash.Hash) ([]ReplayMutation, error) {
+	syncHeadCommit, err := ReadCommit(db.Noms(), syncHead)
+	if err != nil {
+		return []ReplayMutation{}, err
 	}
 
 	defer db.lock()()
 	head := db.head
 
-	// Stop if someone landed a sync since this sync started.
+	// Stop if someone landed a sync since this sync started (see explanation below).
 	syncSnapshot, err := baseSnapshot(db.noms, syncHeadCommit)
 	if err != nil {
-		return false, []ReplayMutation{}, err
+		return []ReplayMutation{}, err
 	}
 	syncSnapshotBasis, err := syncSnapshot.Basis(db.noms)
 	if err != nil {
-		return false, []ReplayMutation{}, err
+		return []ReplayMutation{}, err
 	}
 	headSnapshot, err := baseSnapshot(db.noms, head)
 	if err != nil {
-		return false, []ReplayMutation{}, err
+		return []ReplayMutation{}, err
 	}
+	// BeginSync() added a new snapshot commit whose basis is the forkpoint.
+	// E.g., in below diagram, BeginSync added SS2, the sync snapshot, and SS1
+	// is the master snapshot basis and the forkpoint.
+	// SS1 - L3 <- Master
+	//   \ - SS2 - L1 - L2 <- SyncHead
+	// However, the situation on master could have changed while this sync was running.
+	// We need to check if the master snapshot basis is the same as SS1. If not,
+	// some other sync landed a new snapshot on master and we have to abort. We do
+	// not expect this in normal operation, we're being defensive.
 	if !syncSnapshotBasis.NomsStruct.Equals(headSnapshot.NomsStruct) {
-		return false, []ReplayMutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
+		return []ReplayMutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
 	}
 
 	// Determine if there are any pending mutations that we need to replay.
 	pendingCommits, err := pendingCommits(db.noms, head)
 	if err != nil {
-		return false, []ReplayMutation{}, err
+		return []ReplayMutation{}, err
 	}
 	commitsToReplay := filterIDsLessThanOrEqualTo(pendingCommits, syncHeadCommit.MutationID())
 	var replay []ReplayMutation
@@ -97,7 +101,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []ReplayMutation, error) {
 			var args bytes.Buffer
 			err = nomsjson.ToJSON(c.Meta.Local.Args, &args)
 			if err != nil {
-				return false, []ReplayMutation{}, err
+				return []ReplayMutation{}, err
 			}
 			replay = append(replay, ReplayMutation{
 				Mutation{
@@ -110,7 +114,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []ReplayMutation, error) {
 				},
 			})
 		}
-		return false, replay, nil
+		return replay, nil
 	}
 
 	// TODO check invariants from synchead back to syncsnapshot.
@@ -118,14 +122,13 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) (bool, []ReplayMutation, error) {
 	// Sync is complete. Can't ffwd because sync head is dangling.
 	_, err = db.noms.SetHead(db.noms.GetDataset(MASTER_DATASET), syncHeadCommit.Ref())
 	if err != nil {
-		return false, []ReplayMutation{}, err
+		return []ReplayMutation{}, err
 	}
 	db.head = syncHeadCommit
 
-	return true, []ReplayMutation{}, nil
+	return []ReplayMutation{}, nil
 }
 
-// Assumes commits are in ascending order of mutation id.
 func filterIDsLessThanOrEqualTo(commits []Commit, filter uint64) (filtered []Commit) {
 	for i := 0; i < len(commits); i++ {
 		if commits[i].MutationID() > filter {

@@ -311,7 +311,7 @@ func TestReplayWriteTransaction(t *testing.T) {
 			assert.NoError(err)
 			assert.True(tt.basis.NomsStruct.Equals(gotBasis.NomsStruct))
 			gotOriginal, err := gotCommit.Original(db.noms)
-			assert.NoError(err)
+			assert.NoError(err, tt.name)
 			assert.True(tt.original.NomsStruct.Equals(gotOriginal.NomsStruct), "%s: %s != %s", tt.name, tt.original.NomsStruct.Hash(), gotOriginal.NomsStruct.Hash())
 			assert.Equal(tt.original.Meta.Local.Name, gotCommit.Meta.Local.Name)
 			assert.Equal(tt.original.Meta.Local.MutationID, gotCommit.Meta.Local.MutationID)

@@ -192,12 +192,11 @@ func (conn *connection) dispatchMaybeEndSync(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	ended, replay, err := conn.db.MaybeEndSync(req.SyncHead.Hash)
+	replay, err := conn.db.MaybeEndSync(req.SyncHead.Hash)
 	if err != nil {
 		return nil, err
 	}
 	res := maybeEndSyncResponse{
-		Ended:           ended,
 		ReplayMutations: replay,
 	}
 	return mustMarshal(res), nil
@@ -268,7 +267,7 @@ func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage, ba
 		}
 		var basisCommit, originalCommit *db.Commit
 		// If it's a replay...
-		if basis != (hash.Hash{}) {
+		if !basis.IsEmpty() {
 			b, err := db.ReadCommit(conn.db.Noms(), basis)
 			if err != nil {
 				return 0, err
@@ -299,7 +298,7 @@ func (conn *connection) dispatchOpenTransaction(reqBytes []byte) ([]byte, error)
 	}
 
 	var basis, original hash.Hash
-	if (req.RebaseOpts != rebaseOpts{}) {
+	if req.RebaseOpts != (rebaseOpts{}) {
 		basis = req.RebaseOpts.Basis.Hash
 		original = req.RebaseOpts.Original.Hash
 	}

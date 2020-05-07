@@ -193,7 +193,7 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 		if err != nil {
 			return
 		}
-		commit = makeReplayedLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum, *tx.original)
+		commit = makeReplayedLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum, (*tx.original).Ref())
 		ref = tx.db.noms.WriteValue(commit.NomsStruct)
 		return
 	}

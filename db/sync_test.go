@@ -220,7 +220,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 		numPending       int
 		numNeedingReplay int
 		interveningSync  bool
-		expEnded         bool
 		expReplayIds     []uint64
 		expErr           string
 	}{
@@ -229,7 +228,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			0,
 			0,
 			false,
-			true,
 			[]uint64{},
 			"",
 		},
@@ -238,7 +236,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			2,
 			0,
 			false,
-			true,
 			[]uint64{},
 			"",
 		},
@@ -246,7 +243,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			"3 pending, 2 to replay",
 			3,
 			2,
-			false,
 			false,
 			[]uint64{2, 3},
 			"",
@@ -256,7 +252,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			0,
 			0,
 			true,
-			false,
 			[]uint64{},
 			"newer snapshot",
 		},
@@ -265,7 +260,6 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			2,
 			0,
 			true,
-			false,
 			[]uint64{},
 			"newer snapshot",
 		},
@@ -298,15 +292,14 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			}
 			syncHead := syncBranch.head()
 
-			gotEnded, gotReplay, err := db.MaybeEndSync(syncHead.NomsStruct.Hash())
+			gotReplay, err := db.MaybeEndSync(syncHead.NomsStruct.Hash())
 
-			assert.Equal(tt.expEnded, gotEnded, tt.name)
 			if tt.expErr != "" {
 				assert.Error(err)
 				if err != nil {
 					assert.Regexp(tt.expErr, err.Error(), tt.name)
 				}
-				assert.False(gotEnded)
+				assert.Equal(0, len(gotReplay))
 			} else {
 				assert.NoError(err, tt.name)
 				assert.Equal(len(tt.expReplayIds), len(gotReplay), tt.name)
@@ -321,7 +314,8 @@ func TestDB_MaybeEndSync(t *testing.T) {
 					}
 				}
 			}
-			if tt.expEnded {
+			// If successful...
+			if tt.expErr == "" && len(tt.expReplayIds) == 0 {
 				assert.True(syncHead.NomsStruct.Equals(db.Head().NomsStruct))
 			} else {
 				assert.True(master.head().NomsStruct.Equals(db.Head().NomsStruct))
