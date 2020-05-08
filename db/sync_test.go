@@ -326,3 +326,32 @@ func TestDB_MaybeEndSync(t *testing.T) {
 		})
 	}
 }
+
+func TestPendingCommits(t *testing.T) {
+	assert := assert.New(t)
+
+	db, _ := LoadTempDB(assert)
+	commits := &testCommits{}
+
+	f := func(head Commit, wantCommits []Commit, wantErr error) {
+		gotCommits, gotErr := pendingCommits(db.Noms(), head)
+		if wantErr != nil {
+			assert.Nil(gotCommits)
+			assert.Equal(wantErr, gotErr)
+		} else {
+			assert.Equal(len(wantCommits), len(gotCommits))
+			for i := range wantCommits {
+				assert.True(wantCommits[i].NomsStruct.Equals(gotCommits[i].NomsStruct))
+			}
+			assert.NoError(gotErr)
+		}
+	}
+
+	f(commits.addGenesis(assert, db).head(), []Commit{}, nil)
+	f(commits.addSnapshot(assert, db).head(), []Commit{}, nil)
+	f(commits.addLocal(assert, db, datetime.Now()).head(), []Commit{commits.head()}, nil)
+	f(commits.addSnapshot(assert, db).head(), []Commit{}, nil)
+	f(commits.addLocal(assert, db, datetime.Now()).head(), []Commit{commits.head()}, nil)
+	f(commits.addLocal(assert, db, datetime.Now()).head(), []Commit((*commits)[len(*commits)-2:]), nil)
+	f(commits.addSnapshot(assert, db).head(), []Commit{}, nil)
+}
