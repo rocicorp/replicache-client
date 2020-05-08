@@ -29,7 +29,7 @@ type ReplayMutation struct {
 
 type BatchPushResponse struct {
 	// Should log this in the client
-	MutationInfos []MutationInfo `json:"mutationInfos"`
+	MutationInfos []MutationInfo `json:"mutationInfos,omitempty"`
 }
 
 // Should log this in the client

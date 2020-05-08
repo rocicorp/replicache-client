@@ -11,7 +11,7 @@ import (
 )
 
 type SyncInfo struct {
-	BatchPushInfo  BatchPushInfo             `json:"batchPushInfo"`
+	BatchPushInfo  *BatchPushInfo            `json:"batchPushInfo,omitempty"`
 	ClientViewInfo servetypes.ClientViewInfo `json:"clientViewInfo"`
 }
 
@@ -36,7 +36,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 			log.Printf("batch push failed: %s; continuing with sync", err)
 			// Note: on error we continue, not return.
 		}
-		syncInfo.BatchPushInfo = batchPushInfo
+		syncInfo.BatchPushInfo = &batchPushInfo
 	}
 
 	// Pull
