@@ -10,13 +10,14 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
+	assertpkg "github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
 func TestDB_BeginSync(t *testing.T) {
-	assert := assert.New(t)
+	assert := assertpkg.New(t)
 	d := datetime.Now()
 	batchPushURL := "https://example.com/push"
 	diffServerURL := "https://example.com/pull"
@@ -45,7 +46,7 @@ func TestDB_BeginSync(t *testing.T) {
 		// BeginSync
 		wantSyncHead hash.Hash
 		wantCVI      servetypes.ClientViewInfo
-		wantBPI      BatchPushInfo
+		wantBPI      *BatchPushInfo
 		wantErr      string
 	}{
 		{
@@ -58,7 +59,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			BatchPushInfo{HTTPStatusCode: 1},
+			&BatchPushInfo{HTTPStatusCode: 1},
 			"",
 		},
 		{
@@ -71,7 +72,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			BatchPushInfo{},
+			nil,
 			"",
 		},
 		{
@@ -84,7 +85,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			BatchPushInfo{HTTPStatusCode: 1},
+			nil,
 			"",
 		},
 		{
@@ -97,12 +98,14 @@ func TestDB_BeginSync(t *testing.T) {
 			"pull error",
 			hash.Hash{},
 			servetypes.ClientViewInfo{},
-			BatchPushInfo{HTTPStatusCode: 1},
+			&BatchPushInfo{HTTPStatusCode: 1},
 			"pull error",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			assert = assertpkg.New(t)
 			db, dir := LoadTempDB(assert)
 			fmt.Println("dir", dir)
 
@@ -118,7 +121,7 @@ func TestDB_BeginSync(t *testing.T) {
 			assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 
 			fakePusher := fakePusher{
-				info: tt.wantBPI,
+				info: tt.pushInfo,
 				err:  tt.pushErr,
 			}
 			db.pusher = &fakePusher
@@ -132,14 +135,14 @@ func TestDB_BeginSync(t *testing.T) {
 			gotSyncHead, gotSyncInfo, gotErr := db.BeginSync(batchPushURL, diffServerURL, dataLayerAuth)
 			// Push-specific assertions.
 			if tt.numLocals > 0 {
-				assert.Equal(batchPushURL, fakePusher.gotURL, tt.name)
+				assert.Equal(batchPushURL, fakePusher.gotURL)
 				assert.Equal(dataLayerAuth, fakePusher.gotDataLayerAuth)
 				assert.Equal(db.clientID, fakePusher.gotObfuscatedClientID)
 				var gotMutationIDs []uint64
 				for _, m := range fakePusher.gotPending {
 					gotMutationIDs = append(gotMutationIDs, m.MutationID)
 				}
-				assert.Equal(tt.wantPushMutationIDs, gotMutationIDs, tt.name)
+				assert.Equal(tt.wantPushMutationIDs, gotMutationIDs)
 			}
 
 			// Pull-specific assertions.
@@ -155,7 +158,7 @@ func TestDB_BeginSync(t *testing.T) {
 			assert.True(commits.head().NomsStruct.Equals(db.Head().NomsStruct))
 			if tt.wantErr != "" {
 				assert.Error(gotErr)
-				assert.Regexp(tt.wantErr, gotErr.Error(), tt.name)
+				assert.Regexp(tt.wantErr, gotErr.Error())
 				assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 
 			} else {
@@ -297,12 +300,12 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			if tt.expErr != "" {
 				assert.Error(err)
 				if err != nil {
-					assert.Regexp(tt.expErr, err.Error(), tt.name)
+					assert.Regexp(tt.expErr, err.Error())
 				}
 				assert.Equal(0, len(gotReplay))
 			} else {
-				assert.NoError(err, tt.name)
-				assert.Equal(len(tt.expReplayIds), len(gotReplay), tt.name)
+				assert.NoError(err)
+				assert.Equal(len(tt.expReplayIds), len(gotReplay))
 				if len(tt.expReplayIds) == len(gotReplay) {
 					for i, mutationID := range tt.expReplayIds {
 						assert.True(int(mutationID) < len(master))

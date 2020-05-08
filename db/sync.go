@@ -35,8 +35,9 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 		if err != nil {
 			log.Printf("batch push failed: %s; continuing with sync", err)
 			// Note: on error we continue, not return.
+		} else {
+			syncInfo.BatchPushInfo = &batchPushInfo
 		}
-		syncInfo.BatchPushInfo = &batchPushInfo
 	}
 
 	// Pull
@@ -45,9 +46,11 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: could not find head snapshot: %w", err)
 	}
 	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, dataLayerAuth, db.clientID)
-	syncInfo.ClientViewInfo = clientViewInfo
 	if err != nil {
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: %w", err)
+	} else {
+		syncInfo.ClientViewInfo = clientViewInfo
+
 	}
 	syncHeadRef := db.noms.WriteValue(newSnapshot.NomsStruct)
 
