@@ -71,7 +71,7 @@ type delResponse struct {
 
 type beginSyncRequest struct {
 	BatchPushURL  string `json:"batchPushURL"`
-	ClientViewURL string `json:"clientViewURL"`
+	DiffServerURL string `json:"diffServerURL"`
 	DataLayerAuth string `json:"dataLayerAuth"`
 }
 
