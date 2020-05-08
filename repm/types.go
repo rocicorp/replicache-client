@@ -104,14 +104,6 @@ type pullResponse struct {
 	Root  jsnoms.Hash        `json:"root,omitempty"`
 }
 
-type pullProgressRequest struct {
-}
-
-type pullProgressResponse struct {
-	BytesReceived uint64 `json:"bytesReceived"`
-	BytesExpected uint64 `json:"bytesExpected"`
-}
-
 type openTransactionRequest struct {
 	Name       string          `json:"name,omitempty"`
 	Args       json.RawMessage `json:"args,omitempty"`

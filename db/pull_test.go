@@ -636,7 +636,7 @@ func TestDoomedDBPull(t *testing.T) {
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, t.label)
 
-		cvi, err := db.Pull(sp, clientViewAuth, nil)
+		cvi, err := db.Pull(sp, clientViewAuth)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 		} else {
@@ -676,27 +676,26 @@ func TestProgressWhichIsDoomed(t *testing.T) {
 	}
 
 	tc := []struct {
-		hasProgressHandler bool
-		sendContentLength  bool
-		sendEntityLength   bool
-		chunks             [][]byte
+		sendContentLength bool
+		sendEntityLength  bool
+		chunks            [][]byte
 	}{
-		{false, false, false, oneChunk},
-		{true, false, false, oneChunk},
-		{false, true, false, oneChunk},
-		{false, false, true, oneChunk},
-		{true, true, false, oneChunk},
-		{true, false, true, oneChunk},
-		{false, true, true, oneChunk},
-		{true, true, true, oneChunk},
-		{false, false, false, twoChunks},
-		{true, false, false, twoChunks},
-		{false, true, false, twoChunks},
-		{false, false, true, twoChunks},
-		{true, true, false, twoChunks},
-		{true, false, true, twoChunks},
-		{false, true, true, twoChunks},
-		{true, true, true, twoChunks},
+		{false, false, oneChunk},
+		{false, false, oneChunk},
+		{true, false, oneChunk},
+		{false, true, oneChunk},
+		{true, false, oneChunk},
+		{false, true, oneChunk},
+		{true, true, oneChunk},
+		{true, true, oneChunk},
+		{false, false, twoChunks},
+		{false, false, twoChunks},
+		{true, false, twoChunks},
+		{false, true, twoChunks},
+		{true, false, twoChunks},
+		{false, true, twoChunks},
+		{true, true, twoChunks},
+		{true, true, twoChunks},
 	}
 
 	assert := assert.New(t)
@@ -711,12 +710,6 @@ func TestProgressWhichIsDoomed(t *testing.T) {
 			expected uint64
 		}
 		reports := []report{}
-		var progress Progress
-		if t.hasProgressHandler {
-			progress = func(bytesReceived, bytesExpected uint64) {
-				reports = append(reports, report{bytesReceived, bytesExpected})
-			}
-		}
 
 		totalLen := total(t.chunks)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -739,28 +732,10 @@ func TestProgressWhichIsDoomed(t *testing.T) {
 		clientViewAuth := "test-2"
 		sp, err := spec.ForDatabase(server.URL)
 		assert.NoError(err, label)
-		_, err = db.Pull(sp, clientViewAuth, progress)
+		_, err = db.Pull(sp, clientViewAuth)
 		assert.Regexp(`Response from http://[\d\.\:]+/pull is not valid JSON`, err)
 
 		expected := []report{}
-		if t.hasProgressHandler {
-			soFar := uint64(0)
-			for _, c := range t.chunks {
-				soFar += uint64(len(c))
-				expectedLen := soFar
-				if t.sendEntityLength || t.sendContentLength {
-					expectedLen = totalLen
-				}
-				expected = append(expected, report{
-					received: soFar,
-					expected: expectedLen,
-				})
-			}
-			// If there's no content length, the reader gets called one extra time to figure out it's at the end.
-			if !t.sendContentLength {
-				expected = append(expected, expected[len(expected)-1])
-			}
-		}
 		assert.Equal(expected, reports, label)
 	}
 }

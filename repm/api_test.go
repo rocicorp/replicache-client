@@ -1,7 +1,6 @@
 package repm
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -117,31 +116,16 @@ func TestProgress(t *testing.T) {
 
 	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
 
-	getProgress := func() (received, expected uint64) {
-		buf, err := Dispatch("db1", "pullProgress", mustMarshal(pullProgressRequest{}))
-		assert.NoError(err)
-		var resp pullProgressResponse
-		err = json.Unmarshal(buf, &resp)
-		assert.NoError(err)
-		return resp.BytesReceived, resp.BytesExpected
-	}
-
 	totalLength := uint64(len(twoChunks[0]) + len(twoChunks[1]))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-length", fmt.Sprintf("%d", totalLength))
 		seen := uint64(0)
-		rec, exp := getProgress()
-		assert.Equal(uint64(0), rec)
-		assert.Equal(uint64(0), exp)
 		for _, c := range twoChunks {
 			seen += uint64(len(c))
 			_, err := w.Write(c)
 			assert.NoError(err)
 			w.(http.Flusher).Flush()
 			gtime.Sleep(100 * gtime.Millisecond)
-			rec, exp := getProgress()
-			assert.Equal(seen, rec)
-			assert.Equal(totalLength, exp)
 		}
 	}))
 

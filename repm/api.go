@@ -17,7 +17,6 @@ import (
 type connection struct {
 	dir                string
 	db                 *db.DB
-	sp                 pullProgress
 	transactions       map[int]*db.Transaction
 	transactionCounter int
 	transactionMutex   sync.RWMutex
@@ -25,11 +24,6 @@ type connection struct {
 
 func newConnection(d *db.DB, p string) *connection {
 	return &connection{db: d, dir: p, transactions: map[int]*db.Transaction{}, transactionCounter: 1}
-}
-
-type pullProgress struct {
-	bytesReceived uint64
-	bytesExpected uint64
 }
 
 func (conn *connection) findTransaction(txID int) (*db.Transaction, error) {
@@ -208,12 +202,7 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 	}
 
 	res := pullResponse{}
-	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth, func(received, expected uint64) {
-		conn.sp = pullProgress{
-			bytesReceived: received,
-			bytesExpected: expected,
-		}
-	})
+	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -227,19 +216,6 @@ func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
 		}
 	}
 
-	return mustMarshal(res), nil
-}
-
-func (conn *connection) dispatchPullProgress(reqBytes []byte) ([]byte, error) {
-	var req pullProgressRequest
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-	res := pullProgressResponse{
-		BytesReceived: conn.sp.bytesReceived,
-		BytesExpected: conn.sp.bytesExpected,
-	}
 	return mustMarshal(res), nil
 }
 

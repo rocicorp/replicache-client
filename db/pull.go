@@ -7,12 +7,10 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
 	"roci.dev/diff-server/util/chk"
-	"roci.dev/diff-server/util/countingreader"
 
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
@@ -23,8 +21,6 @@ import (
 type PullAuthError struct {
 	error
 }
-
-type Progress func(bytesReceived, bytesExpected uint64)
 
 func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	if c.Type() == CommitTypeSnapshot {
@@ -41,7 +37,7 @@ const sandboxAuthorization = "sandbox"
 
 // Pull pulls new server state from the client side.
 // This function is doomed; the full implementation of sync will use pull() below.
-func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (servetypes.ClientViewInfo, error) {
+func (db *DB) Pull(remote spec.Spec, clientViewAuth string) (servetypes.ClientViewInfo, error) {
 	genesis, err := baseSnapshot(db.noms, db.Head())
 	if err != nil {
 		return servetypes.ClientViewInfo{}, err
@@ -78,43 +74,8 @@ func (db *DB) Pull(remote spec.Spec, clientViewAuth string, progress Progress) (
 		return servetypes.ClientViewInfo{}, fmt.Errorf("%s: %s", resp.Status, s)
 	}
 
-	getExpectedLength := func() (r int64, err error) {
-		var s = resp.Header.Get("Entity-length")
-		if s != "" {
-			r, err = strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				return 0, fmt.Errorf("Non-integral value for Entity-length header: %s", s)
-			}
-			return r, nil
-		}
-		if resp.ContentLength >= 0 {
-			return resp.ContentLength, nil
-		}
-		return 0, nil
-	}
-
 	var pullResp servetypes.PullResponse
 	var r io.Reader = resp.Body
-	if progress != nil {
-		cr := &countingreader.Reader{
-			R: resp.Body,
-		}
-		expected, err := getExpectedLength()
-		if err != nil {
-			return servetypes.ClientViewInfo{}, err
-		}
-		cr.Callback = func() {
-			rec := cr.Count
-			exp := uint64(expected)
-			if exp == 0 {
-				exp = rec
-			} else if rec > exp {
-				rec = exp
-			}
-			progress(rec, exp)
-		}
-		r = cr
-	}
 	err = json.NewDecoder(r).Decode(&pullResp)
 	if err != nil {
 		return servetypes.ClientViewInfo{}, fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
