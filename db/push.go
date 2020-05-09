@@ -50,6 +50,9 @@ type pusher interface {
 
 type defaultPusher struct{}
 
+// Push sneds pending local commits to the batch endpoint. It returns an error if the request could not 
+// be completed. It does not return an error for a non-200 status code. The BatchPushInfo will contain
+// the HTTP response code and any error message.
 func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) (BatchPushInfo, error) {
 	var req BatchPushRequest
 	req.ClientID = obfuscatedClientID
@@ -80,7 +83,8 @@ func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obf
 	if httpResp.StatusCode == http.StatusOK {
 		var resp BatchPushResponse
 		if err := json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
-			return info, fmt.Errorf("error decoding batch push response: %w", err)
+			info.ErrorMessage = fmt.Sprintf("error decoding batch push response: %s", err)
+			return info, nil
 		}
 		info.BatchPushResponse = resp
 	} else {

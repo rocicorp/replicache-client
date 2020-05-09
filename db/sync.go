@@ -33,9 +33,10 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 		// TODO use obfuscated client ID
 		batchPushInfo, err := db.pusher.Push(mutations, batchPushURL, dataLayerAuth, db.clientID)
 		if err != nil {
-			log.Printf("batch push failed: %s; continuing with sync", err)
+			log.Printf("DEBUG: unable to make request to %s: %s; continuing with sync", diffServerURL, err)
 			// Note: on error we continue, not return.
 		} else {
+			log.Printf("DEBUG: batch push finished with status %d error message '%s'; continuing sync", batchPushInfo.HTTPStatusCode, batchPushInfo.ErrorMessage)
 			syncInfo.BatchPushInfo = &batchPushInfo
 		}
 	}
@@ -50,7 +51,6 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: %w", err)
 	} else {
 		syncInfo.ClientViewInfo = clientViewInfo
-
 	}
 	syncHeadRef := db.noms.WriteValue(newSnapshot.NomsStruct)
 
