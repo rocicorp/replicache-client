@@ -11,7 +11,15 @@ import (
 )
 
 type SyncInfo struct {
-	BatchPushInfo  *BatchPushInfo            `json:"batchPushInfo,omitempty"`
+	// BatchPushInfo will be set if we attempted to push, ie if there were >0 pending commits.
+	// Status code will be 0 if the request was not sent (eg, connection refused). The
+	// ErrorMessage will be filled in if an error occurred, eg with the http response body
+	// if we got a non-200 response code or "connection refused" if we couldn't make the
+	// request. Note it is possible to have a 200 status code *and* an ErrorMessage, eg
+	// the response code was 200 but we couldn't parse the response body.
+	BatchPushInfo *BatchPushInfo `json:"batchPushInfo,omitempty"`
+	// ClientViewInfo will be set if the request to the diffserver completed with status 200
+	// and the diffserver attempted to request the client view from the data layer.
 	ClientViewInfo servetypes.ClientViewInfo `json:"clientViewInfo"`
 }
 
