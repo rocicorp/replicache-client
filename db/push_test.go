@@ -81,8 +81,8 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			``,
-			BatchPushInfo{HTTPStatusCode: 200},
-			"error decoding",
+			BatchPushInfo{HTTPStatusCode: 200, ErrorMessage: "error decoding batch push response: EOF"},
+			"",
 		},
 		{
 			"malformed response",
@@ -90,8 +90,8 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			`not json`,
-			BatchPushInfo{HTTPStatusCode: 200},
-			"error decoding",
+			BatchPushInfo{HTTPStatusCode: 200, ErrorMessage: "error decoding batch push response: invalid character 'o' in literal null (expecting 'u')"},
+			"",
 		},
 	}
 	for _, tt := range tests {
@@ -123,8 +123,10 @@ func Test_push(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := defaultPusher{}.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
 			if tt.expectedErr != "" {
-				assert.Error(err)
-				assert.Regexp(tt.expectedErr, err.Error())
+				assert.Error(err, tt.name)
+				if err != nil {
+					assert.Regexp(tt.expectedErr, err.Error())
+				}
 			} else {
 				assert.Equal(tt.expected, got)
 			}
