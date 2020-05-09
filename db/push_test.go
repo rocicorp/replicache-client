@@ -23,13 +23,14 @@ func Test_push(t *testing.T) {
 		obfuscatedClientID string
 	}
 	tests := []struct {
-		name        string
-		input       []Local
-		reqError    bool
-		respCode    int
-		respBody    string
-		expected    BatchPushInfo
-		expectedErr string
+		name             string
+		input            []Local
+		reqError         bool
+		respCode         int
+		respBody         string
+		expStatusCode    int
+		expErrorMessage  string
+		expMutationInfos []MutationInfo
 	}{
 		{
 			"nothing to do",
@@ -37,8 +38,9 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			`{}`,
-			BatchPushInfo{HTTPStatusCode: 200},
+			200,
 			"",
+			nil,
 		},
 		{
 			"success",
@@ -49,13 +51,11 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			`{"mutationInfos": [{"ID": "1"}]}`,
-			BatchPushInfo{
-				HTTPStatusCode: 200,
-				BatchPushResponse: BatchPushResponse{
-					MutationInfos: []MutationInfo{
-						{ID: "1"},
-					}}},
+			200,
 			"",
+			[]MutationInfo{
+				{ID: "1"},
+			},
 		},
 		{
 			"request error",
@@ -63,8 +63,9 @@ func Test_push(t *testing.T) {
 			true,
 			0,
 			``,
-			BatchPushInfo{},
-			"connect",
+			0,
+			"connect: connection refused",
+			nil,
 		},
 		{
 			"403",
@@ -72,8 +73,9 @@ func Test_push(t *testing.T) {
 			false,
 			403,
 			`Unauthorized`,
-			BatchPushInfo{HTTPStatusCode: 403, ErrorMessage: "Unauthorized"},
-			"",
+			403,
+			"Unauthorized",
+			nil,
 		},
 		{
 			"empty response",
@@ -81,8 +83,9 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			``,
-			BatchPushInfo{HTTPStatusCode: 200, ErrorMessage: "error decoding batch push response: EOF"},
-			"",
+			200,
+			"error decoding batch push response: EOF",
+			nil,
 		},
 		{
 			"malformed response",
@@ -90,8 +93,9 @@ func Test_push(t *testing.T) {
 			false,
 			200,
 			`not json`,
-			BatchPushInfo{HTTPStatusCode: 200, ErrorMessage: "error decoding batch push response: invalid character 'o' in literal null (expecting 'u')"},
-			"",
+			200,
+			"error decoding batch push response: invalid character 'o' in literal null",
+			nil,
 		},
 	}
 	for _, tt := range tests {
@@ -121,15 +125,10 @@ func Test_push(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := defaultPusher{}.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
-			if tt.expectedErr != "" {
-				assert.Error(err, tt.name)
-				if err != nil {
-					assert.Regexp(tt.expectedErr, err.Error())
-				}
-			} else {
-				assert.Equal(tt.expected, got)
-			}
+			got := defaultPusher{}.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
+			assert.Equal(tt.expStatusCode, got.HTTPStatusCode)
+			assert.Equal(tt.expMutationInfos, got.BatchPushResponse.MutationInfos)
+			assert.Regexp(tt.expErrorMessage, got.ErrorMessage)
 		})
 	}
 }

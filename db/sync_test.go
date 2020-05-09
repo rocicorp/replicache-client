@@ -37,7 +37,6 @@ func TestDB_BeginSync(t *testing.T) {
 		numLocals           int
 		wantPushMutationIDs []uint64
 		pushInfo            BatchPushInfo
-		pushErr             string
 
 		// Pull
 		pullCVI servetypes.ClientViewInfo
@@ -54,7 +53,6 @@ func TestDB_BeginSync(t *testing.T) {
 			2,
 			[]uint64{1, 2},
 			BatchPushInfo{HTTPStatusCode: 1},
-			"",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
@@ -67,7 +65,6 @@ func TestDB_BeginSync(t *testing.T) {
 			0,
 			[]uint64{},
 			BatchPushInfo{},
-			"",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
@@ -79,13 +76,12 @@ func TestDB_BeginSync(t *testing.T) {
 			"push errors, good pull",
 			1,
 			[]uint64{1},
-			BatchPushInfo{},
-			"push error",
+			BatchPushInfo{ErrorMessage: "push error"},
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			nil,
+			&BatchPushInfo{ErrorMessage: "push error"},
 			"",
 		},
 		{
@@ -93,7 +89,6 @@ func TestDB_BeginSync(t *testing.T) {
 			1,
 			[]uint64{1},
 			BatchPushInfo{HTTPStatusCode: 1},
-			"",
 			servetypes.ClientViewInfo{},
 			"pull error",
 			hash.Hash{},
@@ -122,7 +117,6 @@ func TestDB_BeginSync(t *testing.T) {
 
 			fakePusher := fakePusher{
 				info: tt.pushInfo,
-				err:  tt.pushErr,
 			}
 			db.pusher = &fakePusher
 			fakePuller := fakePuller{
@@ -176,19 +170,14 @@ type fakePusher struct {
 	gotObfuscatedClientID string
 
 	info BatchPushInfo
-	err  string
 }
 
-func (f *fakePusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) (BatchPushInfo, error) {
+func (f *fakePusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo {
 	f.gotPending = pending
 	f.gotURL = url
 	f.gotDataLayerAuth = dataLayerAuth
 	f.gotObfuscatedClientID = obfuscatedClientID
-
-	if f.err != "" {
-		return f.info, errors.New(f.err)
-	}
-	return f.info, nil
+	return f.info
 }
 
 type fakePuller struct {

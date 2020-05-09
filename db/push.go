@@ -45,46 +45,51 @@ type BatchPushInfo struct {
 }
 
 type pusher interface {
-	Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) (BatchPushInfo, error)
+	Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo
 }
 
 type defaultPusher struct{}
 
-// Push sneds pending local commits to the batch endpoint. It returns an error if the request could not 
-// be completed. It does not return an error for a non-200 status code. The BatchPushInfo will contain
-// the HTTP response code and any error message.
-func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) (BatchPushInfo, error) {
+// Push sends pending local commits to the batch endpoint. If the request was made
+// the (maybe non-200) status code will be returned in the BatchPushInfo. The BatchPushInfo.ErrorMessage
+// will contain any error message, eg the batch endpoint response body for non-200 status codes or an
+// internal error message if for example the reqeust could not be sent or the response not be parsed.
+func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo {
+	var info BatchPushInfo
+	withErrMsg := func(msg string) BatchPushInfo {
+		info.ErrorMessage = msg
+		return info
+	}
+
 	var req BatchPushRequest
 	req.ClientID = obfuscatedClientID
 	for _, p := range pending {
 		var args bytes.Buffer
 		if err := nomsjson.ToJSON(p.Args, &args); err != nil {
-			return BatchPushInfo{}, err
+			return withErrMsg(err.Error())
 		}
 		req.Mutations = append(req.Mutations, Mutation{p.MutationID, p.Name, args.Bytes()})
 	}
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		return BatchPushInfo{}, err
+		return withErrMsg(err.Error())
 	}
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(reqBody))
 	if err != nil {
-		return BatchPushInfo{}, err
+		return withErrMsg(err.Error())
 	}
 	httpReq.Header.Add("Authorization", dataLayerAuth)
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
-		return BatchPushInfo{}, err
+		return withErrMsg(err.Error())
 	}
 
-	var info BatchPushInfo
 	info.HTTPStatusCode = httpResp.StatusCode
 	if httpResp.StatusCode == http.StatusOK {
 		var resp BatchPushResponse
 		if err := json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
-			info.ErrorMessage = fmt.Sprintf("error decoding batch push response: %s", err)
-			return info, nil
+			return withErrMsg(fmt.Sprintf("error decoding batch push response: %s", err))
 		}
 		info.BatchPushResponse = resp
 	} else {
@@ -98,5 +103,5 @@ func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obf
 		info.ErrorMessage = s
 	}
 
-	return info, nil
+	return info
 }
