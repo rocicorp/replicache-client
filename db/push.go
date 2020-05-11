@@ -34,7 +34,7 @@ type BatchPushResponse struct {
 
 // Should log this in the client
 type MutationInfo struct {
-	ID    string `json:"id"`
+	ID    uint64 `json:"id"`
 	Error string `json:"error"`
 }
 
