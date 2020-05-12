@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -299,7 +298,7 @@ func TestDB_MaybeEndSync(t *testing.T) {
 					for i, mutationID := range tt.expReplayIds {
 						assert.True(int(mutationID) < len(master))
 						assert.Equal(master[mutationID].Meta.Local.Name, gotReplay[i].Name)
-						gotArgs, err := nomsjson.FromJSON(bytes.NewReader(gotReplay[i].Args), db.noms)
+						gotArgs, err := nomsjson.FromJSON(gotReplay[i].Args, db.noms)
 						assert.NoError(err)
 						assert.True(master[mutationID].Meta.Local.Args.Equals(gotArgs))
 						assert.Equal(master[mutationID].Ref().TargetHash(), gotReplay[i].Original.Hash)

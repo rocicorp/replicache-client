@@ -1,7 +1,6 @@
 package db
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +49,7 @@ func Test_push(t *testing.T) {
 			},
 			false,
 			200,
-			`{"mutationInfos": [{"ID": "1"}]}`,
+			`{"mutationInfos": [{"ID": 1}]}`,
 			200,
 			"",
 			[]MutationInfo{
@@ -111,7 +110,7 @@ func Test_push(t *testing.T) {
 			for i := range req.Mutations {
 				assert.Equal(tt.input[i].MutationID, req.Mutations[i].ID)
 				assert.Equal(tt.input[i].Name, req.Mutations[i].Name)
-				v, err := nomsjson.FromJSON(bytes.NewReader(req.Mutations[i].Args), db.noms)
+				v, err := nomsjson.FromJSON(req.Mutations[i].Args, db.noms)
 				assert.NoError(err)
 				assert.True(v.Equals(tt.input[i].Args))
 			}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -193,7 +192,7 @@ func TestPull(t *testing.T) {
 			false,
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2}`,
-			"couldn't apply patch: couldnt parse value from JSON '': EOF",
+			"couldn't apply patch: couldnt parse value from JSON '': couldn't parse value '' as json: unexpected end of JSON input",
 			map[string]string{},
 			"",
 			0,
@@ -293,7 +292,7 @@ func TestPull(t *testing.T) {
 		ed := kv.NewMap(db.noms).Edit()
 		if t.initialState != nil {
 			for k, v := range t.initialState {
-				v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+				v, err := nomsjson.FromJSON([]byte(v), db.Noms())
 				assert.NoError(err)
 				assert.NoError(ed.Set(types.String(k), v))
 			}
@@ -336,7 +335,7 @@ func TestPull(t *testing.T) {
 
 		ee := kv.NewMap(db.noms).Edit()
 		for k, v := range t.expectedData {
-			v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+			v, err := nomsjson.FromJSON([]byte(v), db.Noms())
 			assert.NoError(err)
 			assert.NoError(ee.Set(types.String(k), v), t.label)
 		}
@@ -503,7 +502,7 @@ func TestDoomedDBPull(t *testing.T) {
 			false,
 			http.StatusOK,
 			`{"patch":[{"op":"add","path":"/foo"}],"stateID":"22222222222222222222222222222222","checksum":"c4e7090d","lastMutationID":2}`,
-			"couldnt apply patch: couldnt parse value from JSON '': EOF",
+			"couldnt apply patch: couldnt parse value from JSON '': couldn't parse value '' as json: unexpected end of JSON input",
 			map[string]string{"foo": `"bar"`},
 			"11111111111111111111111111111111",
 			1,
@@ -603,7 +602,7 @@ func TestDoomedDBPull(t *testing.T) {
 		ed := kv.NewMap(db.noms).Edit()
 		if t.initialState != nil {
 			for k, v := range t.initialState {
-				v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+				v, err := nomsjson.FromJSON([]byte(v), db.Noms())
 				assert.NoError(err)
 				assert.NoError(ed.Set(types.String(k), v))
 			}
@@ -647,7 +646,7 @@ func TestDoomedDBPull(t *testing.T) {
 
 		ee := kv.NewMap(db.noms).Edit()
 		for k, v := range t.expectedData {
-			v, err := nomsjson.FromJSON(strings.NewReader(v), db.Noms())
+			v, err := nomsjson.FromJSON([]byte(v), db.Noms())
 			assert.NoError(err)
 			assert.NoError(ee.Set(types.String(k), v), t.label)
 		}

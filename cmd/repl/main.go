@@ -251,7 +251,7 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 		}
 
 		data := v.Bytes()
-		val, err := json.FromJSON(bytes.NewReader(data), db.Noms())
+		val, err := json.FromJSON(data, db.Noms())
 		if err != nil {
 			return fmt.Errorf("could not parse value \"%s\" as json: %s", data, err)
 		}

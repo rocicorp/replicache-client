@@ -55,7 +55,7 @@ func TestCommands(t *testing.T) {
 			"put foo",
 			1,
 			"",
-			"could not parse value \"\" as json: EOF\n",
+			"could not parse value \"\" as json: couldn't parse value '' as json: unexpected end of JSON input\n",
 		},
 		{
 			"put good",
