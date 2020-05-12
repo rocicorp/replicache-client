@@ -224,7 +224,7 @@ func TestCommands(t *testing.T) {
 		assert.Equal(c.out, ob.String(), c.label)
 
 		ebs := eb.String()
-		re := regexp.MustCompile("ClientID: (.){22}\n")
+		re := regexp.MustCompile("ClientID: .+\n")
 		if c.err == "" {
 			assert.Regexp(re, ebs)
 		}
