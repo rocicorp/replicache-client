@@ -111,7 +111,7 @@ func (tx *Transaction) Put(id string, json []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not Put '%s'='%s': %w", id, json, err)
 	}
-	value, err := nomsjson.FromJSON(bytes.NewReader(canonicalJSON), tx.db.noms)
+	value, err := nomsjson.FromJSON(canonicalJSON, tx.db.noms)
 	if err != nil {
 		return fmt.Errorf("could not Put '%s'='%s': %w", id, json, err)
 	}

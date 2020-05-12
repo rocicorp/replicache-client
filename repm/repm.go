@@ -24,6 +24,9 @@ import (
 	"roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
 	"roci.dev/replicache-client/db"
+
+	// Log all http request/response pairs.
+	_ "roci.dev/diff-server/util/loghttp"
 )
 
 var (

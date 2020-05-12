@@ -1,7 +1,6 @@
 package repm
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -229,7 +228,7 @@ func (conn *connection) newTransaction(name string, jsonArgs json.RawMessage, ba
 	if name == "" && len(jsonArgs) == 0 {
 		tx = conn.db.NewTransaction()
 	} else {
-		nomsArgs, err := jsnoms.FromJSON(bytes.NewReader(jsonArgs), conn.db.Noms())
+		nomsArgs, err := jsnoms.FromJSON(jsonArgs, conn.db.Noms())
 		if err != nil {
 			return 0, err
 		}
