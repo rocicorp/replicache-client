@@ -340,15 +340,10 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				break
 			}
 
-			initialCommit, err := c.InitalCommit(d.Noms())
-
 			getStatus := func() (r string, mergedTime time.Time) {
 				r = "PENDING"
 
 				switch c.Type() {
-				case db.CommitTypeReorder:
-					r += " (REBASE)"
-					mergedTime = c.Meta.Reorder.Date.Time
 				case db.CommitTypeLocal:
 					mergedTime = c.Meta.Local.Date.Time
 				default:
@@ -359,12 +354,12 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			}
 
 			getTx := func() string {
-				return fmt.Sprintf("%s(%s)", initialCommit.Meta.Local.Name, types.EncodedValue(initialCommit.Meta.Local.Args))
+				return fmt.Sprintf("%s(%s)", c.Meta.Local.Name, types.EncodedValue(c.Meta.Local.Args))
 			}
 
 			fmt.Fprintln(out, color("commit "+c.NomsStruct.Hash().String(), "red+h"))
 			table := (&tbl.Table{}).
-				Add("Created: ", rtime.String(initialCommit.Meta.Local.Date.Time))
+				Add("Created: ", rtime.String(c.Meta.Local.Date.Time))
 
 			status, t := getStatus()
 			table.Add("Status: ", status)
@@ -372,13 +367,6 @@ func logCmd(parent *kingpin.Application, gdb gdb, out io.Writer) {
 				table.Add("Merged: ", rtime.String(t))
 			}
 
-			if !initialCommit.NomsStruct.Equals(c.NomsStruct) {
-				initialBasis, err := initialCommit.Basis(d.Noms())
-				if err != nil {
-					return err
-				}
-				table.Add("Initial Basis: ", initialBasis.NomsStruct.Hash().String())
-			}
 			table.Add("Transaction: ", getTx())
 
 			_, err = table.WriteTo(out)

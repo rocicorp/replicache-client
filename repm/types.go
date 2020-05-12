@@ -90,20 +90,6 @@ type maybeEndSyncResponse struct {
 	ReplayMutations []db.ReplayMutation `json:"replayMutations,omitempty"`
 }
 
-type pullRequest struct {
-	Remote         jsnoms.Spec `json:"remote"`
-	ClientViewAuth string      `json:"clientViewAuth"`
-}
-
-type pullResponseError struct {
-	BadAuth string `json:"badAuth"`
-}
-
-type pullResponse struct {
-	Error *pullResponseError `json:"error,omitempty"`
-	Root  jsnoms.Hash        `json:"root,omitempty"`
-}
-
 type openTransactionRequest struct {
 	Name       string          `json:"name,omitempty"`
 	Args       json.RawMessage `json:"args,omitempty"`

@@ -31,12 +31,6 @@ Struct Commit {
 		},
 		name: String,
 		args: Value,
-	} |
-	Struct Reorder {
-		date:   Struct DateTime {
-			secSinceEpoch: Number,
-		},
-		subject: Ref<Cycle<Commit>>,
 	},
 	value: Struct {
 		data: Ref<Map<String, Value>>,
@@ -54,11 +48,6 @@ type Local struct {
 	Original   types.Ref `noms:",omitempty"`
 }
 
-type Reorder struct {
-	Date    datetime.DateTime
-	Subject types.Ref
-}
-
 type Snapshot struct {
 	LastMutationID uint64 `noms:",omitempty"`
 	ServerStateID  string `noms:",omitempty"`
@@ -67,7 +56,6 @@ type Snapshot struct {
 type Meta struct {
 	// At most one of these will be set. If none are set, then the commit is the genesis commit.
 	Local    Local    `noms:",omitempty"`
-	Reorder  Reorder  `noms:",omitempty"`
 	Snapshot Snapshot `noms:",omitempty"`
 }
 
@@ -101,15 +89,12 @@ type CommitType uint8
 const (
 	CommitTypeSnapshot = iota
 	CommitTypeLocal
-	CommitTypeReorder
 )
 
 func (t CommitType) String() string {
 	switch t {
 	case CommitTypeLocal:
 		return "CommitTypeLocal"
-	case CommitTypeReorder:
-		return "CommitTypeReorder"
 	case CommitTypeSnapshot:
 		return "CommitTypeSnapshot"
 	}
@@ -128,7 +113,7 @@ func (c Commit) MutationID() uint64 {
 	case CommitTypeSnapshot:
 		return c.Meta.Snapshot.LastMutationID
 	}
-	// TODO chk here once rebase commits are gone.
+	chk.Fail("NOTREACHED")
 	return 0
 }
 
@@ -145,18 +130,7 @@ func (c Commit) Type() CommitType {
 	if c.Meta.Local.Name != "" {
 		return CommitTypeLocal
 	}
-	if !c.Meta.Reorder.Subject.IsZeroValue() {
-		return CommitTypeReorder
-	}
 	return CommitTypeSnapshot
-}
-
-// TODO: Rename to Subject to avoid confusion with ref.TargetValue().
-func (c Commit) Target() types.Ref {
-	if !c.Meta.Reorder.Subject.IsZeroValue() {
-		return c.Meta.Reorder.Subject
-	}
-	return types.Ref{}
 }
 
 func (c Commit) Original(noms types.ValueReadWriter) (Commit, error) {
@@ -166,56 +140,10 @@ func (c Commit) Original(noms types.ValueReadWriter) (Commit, error) {
 	return ReadCommit(noms, c.Meta.Local.Original.TargetHash())
 }
 
-func (c Commit) InitalCommit(noms types.ValueReader) (Commit, error) {
-	switch c.Type() {
-	case CommitTypeLocal, CommitTypeSnapshot:
-		return c, nil
-	case CommitTypeReorder:
-		var t Commit
-		err := marshal.Unmarshal(c.Target().TargetValue(noms), &t)
-		if err != nil {
-			return Commit{}, err
-		}
-		return t.InitalCommit(noms)
-	}
-	return Commit{}, fmt.Errorf("Unexpected commit of type %v: %s", c.Type(), types.EncodedValue(c.NomsStruct))
-}
-
-func (c Commit) TargetValue(noms types.ValueReadWriter) types.Value {
-	t := c.Target()
-	if t.IsZeroValue() {
-		return nil
-	}
-	return t.TargetValue(noms)
-}
-
-func (c Commit) TargetCommit(noms types.ValueReadWriter) (Commit, error) {
-	tv := c.TargetValue(noms)
-	if tv == nil {
-		return Commit{}, nil
-	}
-	var r Commit
-	err := marshal.Unmarshal(tv, &r)
-	return r, err
-}
-
 func (c Commit) BasisRef() types.Ref {
 	switch len(c.Parents) {
-	case 0:
-		return types.Ref{}
 	case 1:
 		return c.Parents[0]
-	case 2:
-		subj := c.Target()
-		if subj.IsZeroValue() {
-			chk.Fail("Unexpected 2-parent type of commit with hash: %s", c.NomsStruct.Hash().String())
-		}
-		for _, p := range c.Parents {
-			if !p.Equals(subj) {
-				return p
-			}
-		}
-		chk.Fail("Unexpected state for commit with hash: %s", c.NomsStruct.Hash().String())
 	}
 	chk.Fail("Unexpected number of parents (%d) for commit with hash: %s", len(c.Parents), c.NomsStruct.Hash().String())
 	return types.Ref{}
@@ -312,17 +240,6 @@ func makeReplayedLocal(noms types.ValueReadWriter, basis types.Ref, d datetime.D
 	c.Meta.Local.Name = f
 	c.Meta.Local.Args = args
 	c.Meta.Local.Original = original
-	c.Value.Data = newData
-	c.Value.Checksum = checksum
-	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)
-	return c
-}
-
-func makeReorder(noms types.ValueReadWriter, basis types.Ref, d datetime.DateTime, subject, newData types.Ref, checksum types.String) Commit {
-	c := Commit{}
-	c.Parents = []types.Ref{basis, subject}
-	c.Meta.Reorder.Date = d
-	c.Meta.Reorder.Subject = subject
 	c.Value.Data = newData
 	c.Value.Checksum = checksum
 	c.NomsStruct = marshal.MustMarshal(noms, c).(types.Struct)

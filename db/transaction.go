@@ -107,11 +107,7 @@ func (tx *Transaction) Put(id string, json []byte) error {
 		return ErrClosed
 	}
 
-	canonicalJSON, err := nomsjson.Canonicalize(json)
-	if err != nil {
-		return fmt.Errorf("could not Put '%s'='%s': %w", id, json, err)
-	}
-	value, err := nomsjson.FromJSON(canonicalJSON, tx.db.noms)
+	value, err := nomsjson.FromJSON(json, tx.db.noms)
 	if err != nil {
 		return fmt.Errorf("could not Put '%s'='%s': %w", id, json, err)
 	}

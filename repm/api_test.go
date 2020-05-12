@@ -1,17 +1,11 @@
 package repm
 
 import (
-	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"testing"
-	gtime "time"
 
-	"github.com/attic-labs/noms/go/spec"
 	"github.com/stretchr/testify/assert"
 
-	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/time"
 )
 
@@ -103,38 +97,4 @@ func TestBasics(t *testing.T) {
 			assert.NoError(err, "test case %s: %s", t.rpc, t.req)
 		}
 	}
-}
-
-func TestProgress(t *testing.T) {
-	assert := assert.New(t)
-	dir, err := ioutil.TempDir("", "")
-	fmt.Println("dir", dir)
-	Init(dir, "", nil)
-	ret, err := Dispatch("db1", "open", nil)
-	assert.Nil(ret)
-	assert.NoError(err)
-
-	twoChunks := [][]byte{[]byte(`"foo`), []byte(`bar"`)}
-
-	totalLength := uint64(len(twoChunks[0]) + len(twoChunks[1]))
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-length", fmt.Sprintf("%d", totalLength))
-		seen := uint64(0)
-		for _, c := range twoChunks {
-			seen += uint64(len(c))
-			_, err := w.Write(c)
-			assert.NoError(err)
-			w.(http.Flusher).Flush()
-			gtime.Sleep(100 * gtime.Millisecond)
-		}
-	}))
-
-	sp, err := spec.ForDatabase(server.URL)
-	assert.NoError(err)
-	req := pullRequest{
-		Remote: jsnoms.Spec{sp},
-	}
-
-	_, err = Dispatch("db1", "pull", mustMarshal(req))
-	assert.Regexp(`is not valid JSON`, err.Error())
 }

@@ -10,17 +10,11 @@ import (
 
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
-	"roci.dev/diff-server/util/chk"
 
-	"github.com/attic-labs/noms/go/spec"
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/verbose"
 	"github.com/pkg/errors"
 )
-
-type PullAuthError struct {
-	error
-}
 
 func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	if c.Type() == CommitTypeSnapshot {
@@ -34,71 +28,6 @@ func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 }
 
 const sandboxAuthorization = "sandbox"
-
-// Pull pulls new server state from the client side.
-// This function is doomed; the full implementation of sync will use pull() below.
-func (db *DB) Pull(remote spec.Spec, clientViewAuth string) (servetypes.ClientViewInfo, error) {
-	genesis, err := baseSnapshot(db.noms, db.Head())
-	if err != nil {
-		return servetypes.ClientViewInfo{}, err
-	}
-	url := fmt.Sprintf("%s/pull", remote.String())
-	pullReq, err := json.Marshal(servetypes.PullRequest{
-		ClientViewAuth: clientViewAuth,
-		ClientID:       db.clientID,
-		BaseStateID:    genesis.Meta.Snapshot.ServerStateID,
-		Checksum:       string(genesis.Value.Checksum),
-	})
-	verbose.Log("Pulling: %s from baseStateID %s", url, genesis.Meta.Snapshot.ServerStateID)
-	verbose.Log("Pulling: clientViewAuth: %s", clientViewAuth)
-	chk.NoError(err)
-
-	req, err := http.NewRequest("POST", url, bytes.NewReader(pullReq))
-	if err != nil {
-		return servetypes.ClientViewInfo{}, err
-	}
-	req.Header.Add("Authorization", sandboxAuthorization) // TODO expose this in the constructor so clients can set it
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return servetypes.ClientViewInfo{}, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		var s string
-		if err == nil {
-			s = string(body)
-		} else {
-			s = err.Error()
-		}
-		return servetypes.ClientViewInfo{}, fmt.Errorf("%s: %s", resp.Status, s)
-	}
-
-	var pullResp servetypes.PullResponse
-	var r io.Reader = resp.Body
-	err = json.NewDecoder(r).Decode(&pullResp)
-	if err != nil {
-		return servetypes.ClientViewInfo{}, fmt.Errorf("Response from %s is not valid JSON: %s", url, err.Error())
-	}
-
-	if pullResp.LastMutationID < genesis.Meta.Snapshot.LastMutationID {
-		return pullResp.ClientViewInfo, fmt.Errorf("Client view lastMutationID %d is < previous lastMutationID %d; ignoring", pullResp.LastMutationID, genesis.Meta.Snapshot.LastMutationID)
-	}
-	patchedMap, err := kv.ApplyPatch(db.Noms(), genesis.Data(db.noms), pullResp.Patch)
-	if err != nil {
-		return pullResp.ClientViewInfo, errors.Wrap(err, "couldnt apply patch")
-	}
-	expectedChecksum, err := kv.ChecksumFromString(pullResp.Checksum)
-	if err != nil {
-		return pullResp.ClientViewInfo, errors.Wrapf(err, "response checksum malformed: %s", pullResp.Checksum)
-	}
-	if patchedMap.Checksum() != expectedChecksum.String() {
-		return pullResp.ClientViewInfo, fmt.Errorf("Checksum mismatch! Expected %s, got %s", expectedChecksum, patchedMap.Checksum())
-	}
-	newHead := makeSnapshot(db.noms, genesis.Ref(), pullResp.StateID, db.noms.WriteValue(patchedMap.NomsMap()), patchedMap.NomsChecksum(), pullResp.LastMutationID)
-	db.noms.WriteValue(newHead.NomsStruct)
-	return pullResp.ClientViewInfo, db.setHead(newHead)
-}
 
 type puller interface {
 	Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error)

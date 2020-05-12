@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/attic-labs/noms/go/hash"
@@ -190,31 +189,6 @@ func (conn *connection) dispatchMaybeEndSync(reqBytes []byte) ([]byte, error) {
 	res := maybeEndSyncResponse{
 		ReplayMutations: replay,
 	}
-	return mustMarshal(res), nil
-}
-
-func (conn *connection) dispatchPull(reqBytes []byte) ([]byte, error) {
-	var req pullRequest
-	err := json.Unmarshal(reqBytes, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	res := pullResponse{}
-	clientViewInfo, err := conn.db.Pull(req.Remote.Spec, req.ClientViewAuth)
-	if err != nil {
-		return nil, err
-	}
-	res.Root = jsnoms.Hash{
-		Hash: conn.db.HeadHash(),
-	}
-
-	if clientViewInfo.HTTPStatusCode == http.StatusUnauthorized {
-		res.Error = &pullResponseError{
-			BadAuth: clientViewInfo.ErrorMessage,
-		}
-	}
-
 	return mustMarshal(res), nil
 }
 

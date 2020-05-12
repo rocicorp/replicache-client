@@ -110,20 +110,6 @@ func TestMarshal(t *testing.T) {
 				}),
 			}),
 		},
-		{
-			makeReorder(noms, g.Ref(), d, tx.Ref(), drRef, drChecksum),
-			types.NewStruct("Commit", types.StructData{
-				"parents": types.NewSet(noms, g.Ref(), tx.Ref()),
-				"meta": types.NewStruct("Reorder", types.StructData{
-					"date":    marshal.MustMarshal(noms, d),
-					"subject": tx.Ref(),
-				}),
-				"value": types.NewStruct("", types.StructData{
-					"data":     drRef,
-					"checksum": drChecksum,
-				}),
-			}),
-		},
 	}
 
 	for i, t := range tc {

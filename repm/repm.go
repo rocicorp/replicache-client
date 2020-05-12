@@ -122,8 +122,6 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return conn.dispatchBeginSync(data)
 	case "maybeEndSync":
 		return conn.dispatchMaybeEndSync(data)
-	case "pull":
-		return conn.dispatchPull(data)
 	case "openTransaction":
 		return conn.dispatchOpenTransaction(data)
 	case "closeTransaction":
