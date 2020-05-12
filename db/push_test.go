@@ -54,7 +54,7 @@ func Test_push(t *testing.T) {
 			200,
 			"",
 			[]MutationInfo{
-				{ID: "1"},
+				{ID: 1},
 			},
 		},
 		{
