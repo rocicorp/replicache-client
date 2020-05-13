@@ -8,7 +8,8 @@ require (
 	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 	github.com/pkg/errors v0.9.1
+	github.com/rs/zerolog v1.18.0
 	github.com/stretchr/testify v1.5.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200512101740-49ba28f5d8bc
+	roci.dev/diff-server v0.0.0-20200513195013-4c10e7c22f8c
 )

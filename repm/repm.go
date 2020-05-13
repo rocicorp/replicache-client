@@ -9,18 +9,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
 	"runtime"
-	"runtime/debug"
+	"sync/atomic"
 
 	"github.com/attic-labs/noms/go/spec"
+	zl "github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 
 	"roci.dev/diff-server/util/chk"
-	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
 	"roci.dev/replicache-client/db"
@@ -32,6 +33,9 @@ import (
 var (
 	connections = map[string]*connection{}
 	repDir      string
+
+	// Unique rpc request ID
+	rid uint64
 )
 
 // Logger allows client to optionally provide a place to send repm's log messages.
@@ -42,14 +46,16 @@ type Logger interface {
 // Init initializes Replicache. If the specified storage directory doesn't exist, it
 // is created. Logger receives logging output from Replicache.
 func Init(storageDir, tempDir string, logger Logger) {
-	log.Printf("Hello from repm")
 	if logger == nil {
 		logger = os.Stderr
 	}
-	rlog.Init(logger, rlog.Options{Prefix: true})
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger})
+
+	l := log.Default()
+	l.Info().Msg("Hello from repm")
 
 	if storageDir == "" {
-		log.Print("storageDir must be non-empty")
+		l.Error().Msg("storageDir must be non-empty")
 		return
 	}
 	if tempDir != "" {
@@ -68,10 +74,17 @@ func deinit() {
 // Dispatch send an API request to Replicache, JSON-serialized parameters, and returns the response.
 func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	t0 := time.Now()
+	l := log.Default().With().
+		Str("db", dbName).
+		Str("req", rpc).
+		Uint64("rid", atomic.AddUint64(&rid, 1)).
+		Logger()
+
+	l.Debug().Bytes("data", data).Msg("rpc -->")
+
 	defer func() {
 		t1 := time.Now()
-		ds := string(data)
-		log.Printf("Dispatch %v :: %v %v took %v - returned %v", dbName, rpc, ds, t1.Sub(t0), len(ret))
+		l.Debug().Bytes("ret", ret).Dur("dur", t1.Sub(t0)).Msg("rpc <--")
 		if r := recover(); r != nil {
 			var msg string
 			if e, ok := r.(error); ok {
@@ -79,7 +92,7 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 			} else {
 				msg = fmt.Sprintf("%v", r)
 			}
-			log.Printf("Replicache panicked with: %s\n%s\n", msg, string(debug.Stack()))
+			l.Error().Stack().Msgf("Replicache panicked with: %s\n", msg)
 			ret = nil
 			err = fmt.Errorf("Replicache panicked with: %s - see stderr for more", msg)
 		}
@@ -87,9 +100,9 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 
 	switch rpc {
 	case "list":
-		return list()
+		return list(l)
 	case "open":
-		return nil, open(dbName)
+		return nil, open(dbName, l)
 	case "close":
 		return nil, close(dbName)
 	case "drop":
@@ -97,7 +110,7 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	case "version":
 		return []byte(version.Version()), nil
 	case "profile":
-		profile()
+		profile(l)
 		return nil, nil
 	}
 
@@ -105,6 +118,9 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	if conn == nil {
 		return nil, errors.New("specified database is not open")
 	}
+
+	l = l.With().Str("cid", conn.db.ClientID()).Logger()
+
 	switch rpc {
 	case "getRoot":
 		return conn.dispatchGetRoot(data)
@@ -119,7 +135,7 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	case "del":
 		return conn.dispatchDel(data)
 	case "beginSync":
-		return conn.dispatchBeginSync(data)
+		return conn.dispatchBeginSync(data, l)
 	case "maybeEndSync":
 		return conn.dispatchMaybeEndSync(data)
 	case "openTransaction":
@@ -127,7 +143,7 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 	case "closeTransaction":
 		return conn.dispatchCloseTransaction(data)
 	case "commitTransaction":
-		return conn.dispatchCommitTransaction(data)
+		return conn.dispatchCommitTransaction(data, l)
 	}
 	chk.Fail("Unsupported rpc name: %s", rpc)
 	return nil, nil
@@ -141,7 +157,7 @@ type ListResponse struct {
 	Databases []DatabaseInfo `json:"databases"`
 }
 
-func list() (resBytes []byte, err error) {
+func list(l zl.Logger) (resBytes []byte, err error) {
 	if repDir == "" {
 		return nil, errors.New("must call init first")
 	}
@@ -168,7 +184,7 @@ func list() (resBytes []byte, err error) {
 		if entry.IsDir() {
 			b, err := base64.RawURLEncoding.DecodeString(entry.Name())
 			if err != nil {
-				log.Printf("Could not decode directory name: %s, skipping", entry.Name())
+				l.Err(err).Msgf("Could not decode directory name: %s, skipping", entry.Name())
 				continue
 			}
 			resp.Databases = append(resp.Databases, DatabaseInfo{
@@ -180,7 +196,7 @@ func list() (resBytes []byte, err error) {
 }
 
 // Open a Replicache database. If the named database doesn't exist it is created.
-func open(dbName string) error {
+func open(dbName string, l zl.Logger) error {
 	if repDir == "" {
 		return errors.New("Replicache is uninitialized - must call init first")
 	}
@@ -193,8 +209,8 @@ func open(dbName string) error {
 	}
 
 	p := dbPath(repDir, dbName)
-	log.Printf("Opening Replicache database '%s' at '%s'", dbName, p)
-	log.Printf("Using tempdir: %s", os.TempDir())
+	l.Info().Msgf("Opening Replicache database '%s' at '%s'", dbName, p)
+	l.Debug().Msgf("Using tempdir: %s", os.TempDir())
 	sp, err := spec.ForDatabase(p)
 	if err != nil {
 		return err
@@ -246,9 +262,9 @@ func dbPath(root, name string) string {
 	return path.Join(root, base64.RawURLEncoding.EncodeToString([]byte(name)))
 }
 
-func profile() {
+func profile(l zl.Logger) {
 	runtime.SetBlockProfileRate(1)
 	go func() {
-		log.Println("Enabling http profiler:", http.ListenAndServe("localhost:6060", nil))
+		l.Info().Msgf("Enabling http profiler: %s", http.ListenAndServe("localhost:6060", nil))
 	}()
 }

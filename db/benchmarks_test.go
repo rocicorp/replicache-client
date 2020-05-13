@@ -6,6 +6,7 @@ import (
 
 	"github.com/attic-labs/noms/go/types"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/util/log"
 )
 
 func BenchmarkPut(b *testing.B) {
@@ -16,7 +17,7 @@ func BenchmarkPut(b *testing.B) {
 		tx := db.NewTransaction()
 		err := tx.Put("foo", []byte(fmt.Sprintf("%f", types.Number(n))))
 		assert.NoError(err)
-		_, err = tx.Commit()
+		_, err = tx.Commit(log.Default())
 		assert.NoError(err)
 	}
 }

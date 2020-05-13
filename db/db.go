@@ -4,7 +4,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -71,9 +70,8 @@ func (db *DB) initLocked() error {
 
 	cid := db.clientID
 	if cid == "" {
-		cid, err = initClientID(db.noms)
 		// TODO create obfuscated clientID for data layer here as well.
-		log.Printf("ClientID: %s", cid)
+		cid, err = initClientID(db.noms)
 	}
 	if err != nil {
 		return err
@@ -109,6 +107,10 @@ func (db *DB) initLocked() error {
 
 func (db *DB) Noms() types.ValueReadWriter {
 	return db.noms
+}
+
+func (db *DB) ClientID() string {
+	return db.clientID
 }
 
 func (db *DB) Head() Commit {

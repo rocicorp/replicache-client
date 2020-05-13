@@ -33,7 +33,7 @@ func TestLog(t *testing.T) {
 	Init(dir, "", buf)
 	Dispatch("db1", "open", nil)
 
-	assert.Regexp(`^GR[0-9a-f]{9} \d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}\.\d+`, string(buf.Bytes()))
+	assert.Regexp(`Hello from repm`, string(buf.Bytes()))
 }
 
 func s(b []byte) string {

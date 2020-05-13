@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/attic-labs/noms/go/datas"
 	"github.com/attic-labs/noms/go/types"
+	zl "github.com/rs/zerolog"
 
 	"roci.dev/diff-server/kv"
 	nomsjson "roci.dev/diff-server/util/noms/json"
@@ -158,7 +158,7 @@ func (tx *Transaction) Close() error {
 // Commit tries to commits the changes made to the database in this transaction.
 // If this returns without an error the commit succeeded and the new ref of the
 // database head is returned.
-func (tx *Transaction) Commit() (ref types.Ref, err error) {
+func (tx *Transaction) Commit(l zl.Logger) (ref types.Ref, err error) {
 	defer tx.lock()()
 
 	if tx.closed {
@@ -201,7 +201,7 @@ func (tx *Transaction) Commit() (ref types.Ref, err error) {
 		return
 	}
 	if !errors.Is(err, datas.ErrMergeNeeded) && !errors.Is(err, datas.ErrOptimisticLockFailed) {
-		log.Printf("Unexpected error from FastForward: %s", err)
+		l.Err(err).Msg("Unexpected error from FastForward")
 	}
 	err = NewCommitError(err)
 	ref = types.Ref{}

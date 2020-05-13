@@ -10,6 +10,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
+	"roci.dev/diff-server/util/log"
 )
 
 func TestGetSetHead(t *testing.T) {
@@ -66,7 +67,7 @@ func TestData(t *testing.T) {
 	tx := db.NewTransaction()
 	err := tx.Put("foo", exp)
 	assert.NoError(err)
-	_, err = tx.Commit()
+	_, err = tx.Commit(log.Default())
 	assert.NoError(err)
 
 	dbs := []*DB{
@@ -124,11 +125,11 @@ func TestConflictingCommits(t *testing.T) {
 	err = tx2.Put("b", []byte("2"))
 	assert.NoError(err)
 
-	ref1, err := tx1.Commit()
+	ref1, err := tx1.Commit(log.Default())
 	assert.NoError(err)
 	assert.False(ref1.IsZeroValue())
 
-	ref2, err := tx2.Commit()
+	ref2, err := tx2.Commit(log.Default())
 	assert.Error(err)
 	var commitErrror CommitError
 	assert.True(errors.As(err, &commitErrror))

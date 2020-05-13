@@ -3,9 +3,9 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"log"
 
 	"github.com/attic-labs/noms/go/hash"
+	zl "github.com/rs/zerolog"
 	servetypes "roci.dev/diff-server/serve/types"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
@@ -24,7 +24,7 @@ type SyncInfo struct {
 }
 
 // BeginSync pushes pending mutations to the data layer and pulls new state via the client view.
-func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth string) (hash.Hash, SyncInfo, error) {
+func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth string, l zl.Logger) (hash.Hash, SyncInfo, error) {
 	syncInfo := SyncInfo{}
 	head := db.Head()
 
@@ -41,7 +41,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 		// TODO use obfuscated client ID
 		pushInfo := db.pusher.Push(mutations, batchPushURL, dataLayerAuth, db.clientID)
 		syncInfo.BatchPushInfo = &pushInfo
-		log.Printf("DEBUG: batch push finished with status %d error message '%s'", syncInfo.BatchPushInfo.HTTPStatusCode, syncInfo.BatchPushInfo.ErrorMessage)
+		l.Debug().Msgf("Batch push finished with status %d error message '%s'", syncInfo.BatchPushInfo.HTTPStatusCode, syncInfo.BatchPushInfo.ErrorMessage)
 		// Note: we always continue whether the push succeeded or not.
 	}
 
