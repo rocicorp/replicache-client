@@ -47,9 +47,10 @@ type Logger interface {
 // is created. Logger receives logging output from Replicache.
 func Init(storageDir, tempDir string, logger Logger) {
 	if logger == nil {
-		logger = os.Stderr
+		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stdout})
+	} else {
+		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger, NoColor: true})
 	}
-	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger})
 
 	l := log.Default()
 	l.Info().Msg("Hello from repm")
@@ -111,6 +112,20 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return []byte(version.Version()), nil
 	case "profile":
 		profile(l)
+		return nil, nil
+	case "setLogLevel":
+		// dbName param is ignored
+		level := string(data)
+		switch level {
+		case "debug":
+			zl.SetGlobalLevel(zl.DebugLevel)
+		case "info":
+			zl.SetGlobalLevel(zl.InfoLevel)
+		case "error":
+			zl.SetGlobalLevel(zl.ErrorLevel)
+		default:
+			return nil, fmt.Errorf("Invalid level: %s", level)
+		}
 		return nil, nil
 	}
 
