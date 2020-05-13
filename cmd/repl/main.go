@@ -18,10 +18,12 @@ import (
 	"github.com/attic-labs/noms/go/types"
 	"github.com/attic-labs/noms/go/util/outputpager"
 	"github.com/mgutz/ansi"
+	zl "github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"roci.dev/diff-server/util/chk"
-	rlog "roci.dev/diff-server/util/log"
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/noms/json"
 	"roci.dev/diff-server/util/tbl"
 	rtime "roci.dev/diff-server/util/time"
@@ -43,6 +45,9 @@ func main() {
 }
 
 func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
+	zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stderr})
+	l := log.Default()
+
 	app := kingpin.New("repl", "Command-Line Replicache Client")
 	app.ErrorWriter(errs)
 	app.UsageWriter(errs)
@@ -109,10 +114,6 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 			return nil
 		}
 
-		// Init logging
-		logOptions := rlog.Options{}
-		rlog.Init(errs, logOptions)
-
 		if *tf != nil {
 			err := trace.Start(*tf)
 			if err != nil {
@@ -140,8 +141,8 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	has(app, getDB, out)
 	get(app, getDB, out)
 	scan(app, getDB, out, errs)
-	put(app, getDB, in)
-	del(app, getDB, out)
+	put(app, getDB, in, l)
+	del(app, getDB, out, l)
 	drop(app, getSpec, in, out)
 	logCmd(app, getDB, out)
 
@@ -237,7 +238,7 @@ func scan(parent *kingpin.Application, gdb gdb, out, errs io.Writer) {
 	})
 }
 
-func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
+func put(parent *kingpin.Application, gdb gdb, in io.Reader, l zl.Logger) {
 	kc := parent.Command("put", "Reads a JSON-formated value from stdin and puts it into the database.")
 	id := kc.Arg("key", "key of the value to put").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -260,7 +261,7 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 
 		err = tx.Put(*id, data)
 		if err == nil {
-			_, err = tx.Commit()
+			_, err = tx.Commit(l)
 		} else {
 			tx.Close()
 		}
@@ -268,7 +269,7 @@ func put(parent *kingpin.Application, gdb gdb, in io.Reader) {
 	})
 }
 
-func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
+func del(parent *kingpin.Application, gdb gdb, out io.Writer, l zl.Logger) {
 	kc := parent.Command("del", "Deletes an item from the cache.")
 	id := kc.Arg("id", "id of the value to delete").Required().String()
 	kc.Action(func(_ *kingpin.ParseContext) error {
@@ -284,7 +285,7 @@ func del(parent *kingpin.Application, gdb gdb, out io.Writer) {
 			out.Write([]byte("No such id.\n"))
 		}
 		if err == nil {
-			_, err = tx.Commit()
+			_, err = tx.Commit(l)
 		} else {
 			tx.Close()
 		}

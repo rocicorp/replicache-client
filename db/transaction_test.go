@@ -10,6 +10,7 @@ import (
 	"github.com/attic-labs/noms/go/util/datetime"
 	"github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
+	"roci.dev/diff-server/util/log"
 )
 
 func assertDataEquals(assert *assert.Assertions, db *DB, expr string) {
@@ -31,7 +32,7 @@ func TestDel(t *testing.T) {
 	wtx := db.NewTransaction()
 	err = wtx.Put("foo", []byte(`"bar"`))
 	assert.NoError(err)
-	_, err = wtx.Commit()
+	_, err = wtx.Commit(log.Default())
 	assert.NoError(err)
 
 	rtx := db.NewTransaction()
@@ -44,7 +45,7 @@ func TestDel(t *testing.T) {
 	ok, err = wtx.Del("foo")
 	assert.NoError(err)
 	assert.True(ok)
-	_, err = wtx.Commit()
+	_, err = wtx.Commit(log.Default())
 	assert.NoError(err)
 
 	rtx = db.NewTransaction()
@@ -57,7 +58,7 @@ func TestDel(t *testing.T) {
 	ok, err = wtx.Del("foo")
 	assert.NoError(err)
 	assert.False(ok)
-	_, err = wtx.Commit()
+	_, err = wtx.Commit(log.Default())
 	assert.NoError(err)
 }
 
@@ -69,7 +70,7 @@ func TestReadTransaction(t *testing.T) {
 	wtx := db.NewTransaction()
 	err := wtx.Put("foo", exp)
 	assert.NoError(err)
-	_, err = wtx.Commit()
+	_, err = wtx.Commit(log.Default())
 	assert.NoError(err)
 
 	tx := db.NewTransaction()
@@ -99,7 +100,7 @@ func TestClosedTransaction(t *testing.T) {
 
 	tx := db.NewTransaction()
 	assert.False(tx.Closed())
-	_, err := tx.Commit()
+	_, err := tx.Commit(log.Default())
 	assert.NoError(err)
 	assert.True(tx.Closed())
 
@@ -113,7 +114,7 @@ func TestClosedTransaction(t *testing.T) {
 	assert.Equal(ErrClosed, err)
 	_, err = tx.Del("k")
 	assert.Equal(ErrClosed, err)
-	_, err = tx.Commit()
+	_, err = tx.Commit(log.Default())
 	assert.Equal(ErrClosed, err)
 	err = tx.Close()
 	assert.Equal(ErrClosed, err)
@@ -145,7 +146,7 @@ func TestWriteTransaction(t *testing.T) {
 	assert.Nil(act)
 
 	assertDataEquals(assert, db, `map {}`)
-	_, err = tx.Commit()
+	_, err = tx.Commit(log.Default())
 	assert.NoError(err)
 	assertDataEquals(assert, db, `map {"foo": "bar"}`)
 }
@@ -179,7 +180,7 @@ func TestReadAndWriteTransaction(t *testing.T) {
 
 	assertDataEquals(assert, db, `map {}`)
 
-	_, err = wtx.Commit()
+	_, err = wtx.Commit(log.Default())
 	assert.NoError(err)
 
 	has, err = rtx.Has("foo")
@@ -213,11 +214,11 @@ func TestMultipleWriteTransaction(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal(v2, act, "expected %s got %s", v2, act)
 
-	_, err = tx1.Commit()
+	_, err = tx1.Commit(log.Default())
 	assert.NoError(err)
 	assertDataEquals(assert, db, `map {"k": "v1"}`)
 
-	_, err = tx2.Commit()
+	_, err = tx2.Commit(log.Default())
 	assert.Equal("Dataset head is not ancestor of commit", err.Error())
 	assertDataEquals(assert, db, `map {"k": "v1"}`)
 }
@@ -249,7 +250,7 @@ func TestMultipleWriteTransactionClose(t *testing.T) {
 	assert.NoError(err)
 	assertDataEquals(assert, db, `map {}`)
 
-	_, err = tx2.Commit()
+	_, err = tx2.Commit(log.Default())
 	assert.NoError(err)
 	assertDataEquals(assert, db, `map {"k": "v2"}`)
 }
@@ -296,7 +297,7 @@ func TestReplayWriteTransaction(t *testing.T) {
 		tx := db.NewTransactionWithArgs(tt.original.Meta.Local.Name, tt.original.Meta.Local.Args, &tt.basis, &tt.original)
 		assert.True(tx.IsReplay())
 		assert.NoError(tx.Put("key", []byte("true")))
-		gotRef, err := tx.Commit()
+		gotRef, err := tx.Commit(log.Default())
 		assert.True(db.Head().NomsStruct.Equals(head.NomsStruct))
 		if tt.expError != "" {
 			assert.Error(err)

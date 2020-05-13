@@ -12,6 +12,7 @@ import (
 	assertpkg "github.com/stretchr/testify/assert"
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
+	"roci.dev/diff-server/util/log"
 	nomsjson "roci.dev/diff-server/util/noms/json"
 )
 
@@ -125,7 +126,7 @@ func TestDB_BeginSync(t *testing.T) {
 			}
 			db.puller = &fakePuller
 
-			gotSyncHead, gotSyncInfo, gotErr := db.BeginSync(batchPushURL, diffServerURL, dataLayerAuth)
+			gotSyncHead, gotSyncInfo, gotErr := db.BeginSync(batchPushURL, diffServerURL, dataLayerAuth, log.Default())
 			// Push-specific assertions.
 			if tt.numLocals > 0 {
 				assert.Equal(batchPushURL, fakePusher.gotURL)

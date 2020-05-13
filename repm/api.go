@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/attic-labs/noms/go/hash"
+	zl "github.com/rs/zerolog"
 	"roci.dev/diff-server/util/chk"
 	jsnoms "roci.dev/diff-server/util/noms/json"
 	"roci.dev/replicache-client/db"
@@ -159,13 +160,13 @@ func (conn *connection) dispatchDel(reqBytes []byte) ([]byte, error) {
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) dispatchBeginSync(reqBytes []byte) ([]byte, error) {
+func (conn *connection) dispatchBeginSync(reqBytes []byte, l zl.Logger) ([]byte, error) {
 	var req beginSyncRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		return nil, err
 	}
-	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.DiffServerURL, req.DataLayerAuth)
+	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.DiffServerURL, req.DataLayerAuth, l)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +275,7 @@ func (conn *connection) dispatchCloseTransaction(reqBytes []byte) ([]byte, error
 	return mustMarshal(res), nil
 }
 
-func (conn *connection) dispatchCommitTransaction(reqBytes []byte) ([]byte, error) {
+func (conn *connection) dispatchCommitTransaction(reqBytes []byte, l zl.Logger) ([]byte, error) {
 	var req commitTransactionRequest
 	err := json.Unmarshal(reqBytes, &req)
 	if err != nil {
@@ -285,7 +286,7 @@ func (conn *connection) dispatchCommitTransaction(reqBytes []byte) ([]byte, erro
 		return nil, err
 	}
 	conn.removeTransaction(req.TransactionID)
-	commitRef, err := tx.Commit()
+	commitRef, err := tx.Commit(l)
 
 	res := commitTransactionResponse{}
 

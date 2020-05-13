@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 	"roci.dev/replicache-client/db"
 )
@@ -224,11 +224,6 @@ func TestCommands(t *testing.T) {
 		assert.Equal(c.out, ob.String(), c.label)
 
 		ebs := eb.String()
-		re := regexp.MustCompile("ClientID: .+\n")
-		if c.err == "" {
-			assert.Regexp(re, ebs)
-		}
-		ebs = re.ReplaceAllLiteralString(eb.String(), "")
 		assert.Equal(c.err, ebs, c.label)
 	}
 }
@@ -255,14 +250,14 @@ func TestDrop(t *testing.T) {
 		tx := d.NewTransaction()
 		err := tx.Put("foo", []byte(`"bar"`))
 		assert.NoError(err)
-		_, err = tx.Commit()
+		_, err = tx.Commit(log.Default())
 		assert.NoError(err)
 
 		tx = d.NewTransaction()
 		val, err := tx.Get("foo")
 		assert.NoError(err)
 		assert.Equal(`"bar"`, string(val))
-		_, err = tx.Commit()
+		_, err = tx.Commit(log.Default())
 		assert.NoError(err)
 
 		desc := fmt.Sprintf("test case %d, input: %s", i, t.in)

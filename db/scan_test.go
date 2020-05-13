@@ -7,6 +7,7 @@ import (
 
 	"github.com/attic-labs/noms/go/spec"
 	"github.com/stretchr/testify/assert"
+	"roci.dev/diff-server/util/log"
 )
 
 func TestScan(t *testing.T) {
@@ -28,7 +29,7 @@ func TestScan(t *testing.T) {
 	put("ba")
 	put("bb")
 
-	_, err = tx.Commit()
+	_, err = tx.Commit(log.Default())
 	assert.NoError(err)
 
 	index := func(v int) *uint64 {
