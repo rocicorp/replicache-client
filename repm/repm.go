@@ -54,7 +54,6 @@ func Init(storageDir, tempDir string, logger Logger) {
 
 	zl.SetGlobalLevel(zl.InfoLevel)
 	l := log.Default()
-	l.Info().Msg("Hello from repm")
 
 	if storageDir == "" {
 		l.Error().Msg("storageDir must be non-empty")
@@ -214,8 +213,6 @@ func open(dbName string, l zl.Logger) error {
 	}
 
 	p := dbPath(repDir, dbName)
-	l.Info().Msgf("Opening Replicache database '%s' at '%s'", dbName, p)
-	l.Debug().Msgf("Using tempdir: %s", os.TempDir())
 	sp, err := spec.ForDatabase(p)
 	if err != nil {
 		return err
@@ -225,6 +222,7 @@ func open(dbName string, l zl.Logger) error {
 		return err
 	}
 
+	l.Info().Msgf("Opened Replicache instance at: %s with tempdir: %s and ClientID: %s", p, os.TempDir(), db.ClientID())
 	connections[dbName] = newConnection(db, p)
 	return nil
 }
