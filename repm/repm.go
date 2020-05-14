@@ -115,18 +115,7 @@ func Dispatch(dbName, rpc string, data []byte) (ret []byte, err error) {
 		return nil, nil
 	case "setLogLevel":
 		// dbName param is ignored
-		level := string(data)
-		switch level {
-		case "debug":
-			zl.SetGlobalLevel(zl.DebugLevel)
-		case "info":
-			zl.SetGlobalLevel(zl.InfoLevel)
-		case "error":
-			zl.SetGlobalLevel(zl.ErrorLevel)
-		default:
-			return nil, fmt.Errorf("Invalid level: %s", level)
-		}
-		return nil, nil
+		return nil, setLogLevel(data)
 	}
 
 	conn := connections[dbName]
@@ -282,4 +271,24 @@ func profile(l zl.Logger) {
 	go func() {
 		l.Info().Msgf("Enabling http profiler: %s", http.ListenAndServe("localhost:6060", nil))
 	}()
+}
+
+func setLogLevel(data []byte) error {
+	var ls string
+	err := json.Unmarshal(data, &ls)
+	if err != nil {
+		return err
+	}
+
+	switch ls {
+	case "debug":
+		zl.SetGlobalLevel(zl.DebugLevel)
+	case "info":
+		zl.SetGlobalLevel(zl.InfoLevel)
+	case "error":
+		zl.SetGlobalLevel(zl.ErrorLevel)
+	default:
+		return fmt.Errorf("Invalid level: %s", ls)
+	}
+	return nil
 }
