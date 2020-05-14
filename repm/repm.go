@@ -52,6 +52,7 @@ func Init(storageDir, tempDir string, logger Logger) {
 		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger, NoColor: true})
 	}
 
+	zl.SetGlobalLevel(zl.InfoLevel)
 	l := log.Default()
 	l.Info().Msg("Hello from repm")
 
