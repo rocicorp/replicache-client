@@ -35,7 +35,7 @@ func TestLog(t *testing.T) {
 	Init(dir, "", buf)
 	Dispatch("db1", "open", nil)
 
-	assert.Regexp(`Hello from repm`, string(buf.Bytes()))
+	assert.Regexp(`Opened Replicache instance`, string(buf.Bytes()))
 }
 
 func s(b []byte) string {
