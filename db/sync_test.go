@@ -27,8 +27,10 @@ func TestDB_BeginSync(t *testing.T) {
 	db, _ := LoadTempDB(assert)
 	m := kv.NewMap(db.noms)
 	var commits testCommits
-	commits.addGenesis(assert, db).addLocal(assert, db, d)
-	syncSnapshot := makeSnapshot(db.noms, commits.genesis().Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
+	commits.addGenesis(assert, db).addSnapshot(assert, db).addLocal(assert, db, d)
+	headSnapshot, err := baseSnapshot(db.Noms(), commits.head())
+	assert.NoError(err)
+	syncSnapshot := makeSnapshot(db.noms, headSnapshot.Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
 
 	tests := []struct {
 		name string
@@ -39,8 +41,9 @@ func TestDB_BeginSync(t *testing.T) {
 		pushInfo            BatchPushInfo
 
 		// Pull
-		pullCVI servetypes.ClientViewInfo
-		pullErr string
+		pullSSID string
+		pullCVI  servetypes.ClientViewInfo
+		pullErr  string
 
 		// BeginSync
 		wantSyncHead hash.Hash
@@ -53,6 +56,7 @@ func TestDB_BeginSync(t *testing.T) {
 			2,
 			[]uint64{1, 2},
 			BatchPushInfo{HTTPStatusCode: 1},
+			"newssid",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
@@ -65,6 +69,7 @@ func TestDB_BeginSync(t *testing.T) {
 			0,
 			[]uint64{},
 			BatchPushInfo{},
+			"newssid",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
@@ -73,10 +78,24 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 		},
 		{
+			"no push, good pull with same server state id -> error",
+			0,
+			[]uint64{},
+			BatchPushInfo{},
+			headSnapshot.Meta.Snapshot.ServerStateID,
+			servetypes.ClientViewInfo{HTTPStatusCode: 2},
+			"",
+			hash.Hash{},
+			servetypes.ClientViewInfo{HTTPStatusCode: 2},
+			nil,
+			"sync failed: no new data",
+		},
+		{
 			"push errors, good pull",
 			1,
 			[]uint64{1},
 			BatchPushInfo{ErrorMessage: "push error"},
+			"newssid",
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			"",
 			syncSnapshot.NomsStruct.Hash(),
@@ -89,6 +108,7 @@ func TestDB_BeginSync(t *testing.T) {
 			1,
 			[]uint64{1},
 			BatchPushInfo{HTTPStatusCode: 1},
+			"newssid",
 			servetypes.ClientViewInfo{},
 			"pull error",
 			hash.Hash{},
@@ -106,12 +126,15 @@ func TestDB_BeginSync(t *testing.T) {
 
 			var commits testCommits
 			commits.addGenesis(assert, db)
+			commits.addSnapshot(assert, db)
 			for i := 0; i < tt.numLocals; i++ {
 				commits.addLocal(assert, db, d)
 			}
 			assert.NoError(db.setHead(commits.head()))
 
-			syncSnapshot = makeSnapshot(db.noms, commits.genesis().Ref(), "newssid", db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
+			headSnapshot, err := baseSnapshot(db.Noms(), commits.head())
+			assert.NoError(err)
+			syncSnapshot = makeSnapshot(db.noms, headSnapshot.Ref(), tt.pullSSID, db.Noms().WriteValue(m.NomsMap()), m.NomsChecksum(), 43)
 			// Ensure it is not saved so we can check that it is by sync.
 			assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 
@@ -140,12 +163,12 @@ func TestDB_BeginSync(t *testing.T) {
 			}
 
 			// Pull-specific assertions.
-			assert.True(commits.genesis().NomsStruct.Equals(fakePuller.gotBaseState.NomsStruct))
+			assert.True(headSnapshot.NomsStruct.Equals(fakePuller.gotBaseState.NomsStruct))
 			assert.Equal(diffServerURL, fakePuller.gotURL)
 			assert.Equal(dataLayerAuth, fakePuller.gotClientViewAuth)
 
 			// BeginSync behavior as a whole.
-			assert.Equal(tt.wantSyncHead, gotSyncHead)
+			assert.Equal(tt.wantSyncHead, gotSyncHead, tt.name)
 			assert.Equal(tt.wantCVI, gotSyncInfo.ClientViewInfo)
 			assert.Equal(tt.wantBPI, gotSyncInfo.BatchPushInfo)
 			assert.NoError(db.Reload())
@@ -154,7 +177,6 @@ func TestDB_BeginSync(t *testing.T) {
 				assert.Error(gotErr)
 				assert.Regexp(tt.wantErr, gotErr.Error())
 				assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
-
 			} else {
 				assert.NoError(gotErr)
 				assert.NotNil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))

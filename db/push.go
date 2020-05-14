@@ -57,7 +57,7 @@ type defaultPusher struct{}
 func (defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo {
 	var info BatchPushInfo
 	withErrMsg := func(msg string) BatchPushInfo {
-		info.ErrorMessage = msg
+		info.ErrorMessage = fmt.Sprintf("during request to %s: %s", url, msg)
 		return info
 	}
 

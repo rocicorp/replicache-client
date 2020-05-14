@@ -52,9 +52,12 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 	}
 	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, dataLayerAuth, db.clientID)
 	if err != nil {
-		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: %w", err)
+		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: pull from %s failed: %w", diffServerURL, err)
 	} else {
 		syncInfo.ClientViewInfo = clientViewInfo
+	}
+	if newSnapshot.Meta.Snapshot.ServerStateID == headSnapshot.Meta.Snapshot.ServerStateID {
+		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: no new data (client and server both have %s)", headSnapshot.Meta.Snapshot.ServerStateID)
 	}
 	syncHeadRef := db.noms.WriteValue(newSnapshot.NomsStruct)
 

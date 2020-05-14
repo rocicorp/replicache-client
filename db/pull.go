@@ -68,7 +68,7 @@ func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url stri
 		} else {
 			s = err.Error()
 		}
-		return Commit{}, servetypes.ClientViewInfo{}, fmt.Errorf("%s: %s", resp.Status, s)
+		return Commit{}, servetypes.ClientViewInfo{}, fmt.Errorf("status code %s: %s", resp.Status, s)
 	}
 
 	var pullResp servetypes.PullResponse

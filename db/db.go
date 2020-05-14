@@ -109,7 +109,7 @@ func (db *DB) Noms() types.ValueReadWriter {
 	return db.noms
 }
 
-func (db *DB) ClientID() string {
+func (db DB) ClientID() string {
 	return db.clientID
 }
 
