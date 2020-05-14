@@ -10,8 +10,10 @@ import (
 	"testing"
 
 	"github.com/attic-labs/noms/go/types"
+	zl "github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
 	"roci.dev/diff-server/util/version"
 )
@@ -227,4 +229,25 @@ func TestList(t *testing.T) {
 	rb, err = Dispatch("", "list", nil)
 	assert.NoError(err)
 	assert.Equal(`{"databases":[{"name":"db1"}]}`, string(rb))
+}
+
+func TestLogLevel(t *testing.T) {
+	defer deinit()
+	defer time.SetFake()()
+
+	assert := assert.New(t)
+	dir, err := ioutil.TempDir("", "")
+	assert.NoError(err)
+	buf := &bytes.Buffer{}
+	Init(dir, "", buf)
+	Dispatch("", "setLogLevel", []byte("\"error\""))
+
+	assert.Equal(zl.ErrorLevel, zl.GlobalLevel())
+
+	l := log.Default()
+	l.Info().Msg("msg-info")
+	l.Error().Msg("msg-error")
+
+	assert.Contains(buf.String(), "msg-error")
+	assert.NotContains(buf.String(), "msg-info")
 }
