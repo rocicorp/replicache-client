@@ -308,7 +308,7 @@ func TestPull(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
-			assert.Equal("sandbox", r.Header.Get("Authorization"))
+			assert.Equal("diffServerAuth", r.Header.Get("Authorization"))
 			assert.NotEqual("", reqBody.ClientID)
 			assert.Equal(clientViewAuth, reqBody.ClientViewAuth)
 			w.WriteHeader(t.respCode)
@@ -319,7 +319,7 @@ func TestPull(t *testing.T) {
 			server.Close()
 		}
 
-		gotSnapshot, cvi, err := defaultPuller{}.Pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), clientViewAuth, db.clientID)
+		gotSnapshot, cvi, err := defaultPuller{}.Pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), "diffServerAuth", clientViewAuth, db.clientID)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			assert.NotEqual(Commit{}, gotSnapshot)

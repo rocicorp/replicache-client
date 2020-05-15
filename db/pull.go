@@ -27,17 +27,14 @@ func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 	return baseSnapshot(noms, basis)
 }
 
-const sandboxAuthorization = "sandbox"
-
 type puller interface {
-	Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error)
+	Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error)
 }
 
 type defaultPuller struct{}
 
 // Pull pulls new server state from the client view via the diffserver.
-// TODO pass in auth (sandbox is hardcoded)
-func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
 	baseMap := baseState.Data(noms)
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		ClientViewAuth: clientViewAuth,
@@ -54,7 +51,7 @@ func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url stri
 	if err != nil {
 		return Commit{}, servetypes.ClientViewInfo{}, err
 	}
-	req.Header.Add("Authorization", sandboxAuthorization) // TODO expose this in the constructor so clients can set it
+	req.Header.Add("Authorization", diffServerAuth)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Commit{}, servetypes.ClientViewInfo{}, err

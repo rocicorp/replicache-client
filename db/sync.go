@@ -24,7 +24,7 @@ type SyncInfo struct {
 }
 
 // BeginSync pushes pending mutations to the data layer and pulls new state via the client view.
-func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth string, l zl.Logger) (hash.Hash, SyncInfo, error) {
+func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAuth string, dataLayerAuth string, l zl.Logger) (hash.Hash, SyncInfo, error) {
 	syncInfo := SyncInfo{}
 	head := db.Head()
 
@@ -50,7 +50,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, dataLayerAuth
 	if err != nil {
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: could not find head snapshot: %w", err)
 	}
-	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, dataLayerAuth, db.clientID)
+	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, diffServerAuth, dataLayerAuth, db.clientID)
 	if err != nil {
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: pull from %s failed: %w", diffServerURL, err)
 	} else {

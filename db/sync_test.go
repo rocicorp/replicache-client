@@ -149,7 +149,8 @@ func TestDB_BeginSync(t *testing.T) {
 			}
 			db.puller = &fakePuller
 
-			gotSyncHead, gotSyncInfo, gotErr := db.BeginSync(batchPushURL, diffServerURL, dataLayerAuth, log.Default())
+			diffServerAuth := "diffServerAuth"
+			gotSyncHead, gotSyncInfo, gotErr := db.BeginSync(batchPushURL, diffServerURL, diffServerAuth, dataLayerAuth, log.Default())
 			// Push-specific assertions.
 			if tt.numLocals > 0 {
 				assert.Equal(batchPushURL, fakePusher.gotURL)
@@ -165,6 +166,7 @@ func TestDB_BeginSync(t *testing.T) {
 			// Pull-specific assertions.
 			assert.True(headSnapshot.NomsStruct.Equals(fakePuller.gotBaseState.NomsStruct))
 			assert.Equal(diffServerURL, fakePuller.gotURL)
+			assert.Equal(diffServerAuth, fakePuller.gotDiffServerAuth)
 			assert.Equal(dataLayerAuth, fakePuller.gotClientViewAuth)
 
 			// BeginSync behavior as a whole.
@@ -205,6 +207,7 @@ func (f *fakePusher) Push(pending []Local, url string, dataLayerAuth string, obf
 type fakePuller struct {
 	gotBaseState      Commit
 	gotURL            string
+	gotDiffServerAuth string
 	gotClientViewAuth string
 	gotClientID       string
 
@@ -213,9 +216,10 @@ type fakePuller struct {
 	err            string
 }
 
-func (f *fakePuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (f *fakePuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
 	f.gotBaseState = baseState
 	f.gotURL = url
+	f.gotDiffServerAuth = diffServerAuth
 	f.gotClientViewAuth = clientViewAuth
 	f.gotClientID = clientID
 

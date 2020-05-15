@@ -166,7 +166,7 @@ func (conn *connection) dispatchBeginSync(reqBytes []byte, l zl.Logger) ([]byte,
 	if err != nil {
 		return nil, err
 	}
-	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.DiffServerURL, req.DataLayerAuth, l)
+	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.DiffServerURL, req.DiffServerAuth, req.DataLayerAuth, l)
 	if err != nil {
 		return nil, err
 	}

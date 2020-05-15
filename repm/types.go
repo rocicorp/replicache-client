@@ -70,9 +70,10 @@ type delResponse struct {
 }
 
 type beginSyncRequest struct {
-	BatchPushURL  string `json:"batchPushURL"`
-	DiffServerURL string `json:"diffServerURL"`
-	DataLayerAuth string `json:"dataLayerAuth"`
+	BatchPushURL   string `json:"batchPushURL"`
+	DataLayerAuth  string `json:"dataLayerAuth"`
+	DiffServerURL  string `json:"diffServerURL"`
+	DiffServerAuth string `json:"diffServerAuth"`
 }
 
 type beginSyncResponse struct {
