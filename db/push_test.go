@@ -124,7 +124,8 @@ func Test_push(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			got := defaultPusher{}.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
+			pusher := defaultPusher{}
+			got := pusher.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
 			assert.Equal(tt.expStatusCode, got.HTTPStatusCode)
 			assert.Equal(tt.expMutationInfos, got.BatchPushResponse.MutationInfos)
 			assert.Regexp(tt.expErrorMessage, got.ErrorMessage)

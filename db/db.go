@@ -51,8 +51,8 @@ func Load(sp spec.Spec) (*DB, error) {
 func New(noms datas.Database) (*DB, error) {
 	r := DB{
 		noms:   noms,
-		pusher: defaultPusher{},
-		puller: defaultPuller{},
+		pusher: &defaultPusher{},
+		puller: &defaultPuller{},
 	}
 	// Of course nothing could have a handle on r yet, but still good practice.
 	defer r.lock()()

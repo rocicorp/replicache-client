@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"roci.dev/diff-server/kv"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -31,10 +32,21 @@ type puller interface {
 	Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error)
 }
 
-type defaultPuller struct{}
+type defaultPuller struct {
+	c *http.Client
+}
+
+func (d *defaultPuller) client() *http.Client {
+	if d.c == nil {
+		d.c = &http.Client{
+			Timeout: 20 * time.Second, // Enough time to download 4MB on a slow connection.
+		}
+	}
+	return d.c
+}
 
 // Pull pulls new server state from the client view via the diffserver.
-func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
 	baseMap := baseState.Data(noms)
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		ClientViewAuth: clientViewAuth,
@@ -52,7 +64,7 @@ func (defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url stri
 		return Commit{}, servetypes.ClientViewInfo{}, err
 	}
 	req.Header.Add("Authorization", diffServerAuth)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := d.client().Do(req)
 	if err != nil {
 		return Commit{}, servetypes.ClientViewInfo{}, err
 	}
