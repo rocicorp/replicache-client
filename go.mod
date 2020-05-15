@@ -11,5 +11,5 @@ require (
 	github.com/rs/zerolog v1.18.0
 	github.com/stretchr/testify v1.5.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	roci.dev/diff-server v0.0.0-20200513195013-4c10e7c22f8c
+	roci.dev/diff-server v0.0.0-20200515211404-f4dc966b6fa5
 )

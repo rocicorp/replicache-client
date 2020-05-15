@@ -9,7 +9,10 @@ import (
 	"os"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+	"roci.dev/diff-server/util/chk"
+	"roci.dev/diff-server/util/log"
 	"roci.dev/diff-server/util/time"
+
 	"roci.dev/replicache-client/repm"
 )
 
@@ -24,6 +27,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	app.Terminate(exit)
 
 	port := app.Flag("port", "The port to run on").Default("7002").Int()
+	logLevel := app.Flag("log-level", "Log verbosity level").Default("info").Enum("error", "info", "debug")
 	useFakeTime := app.Flag("fake-time", "Use a fake time for more stable commits hashes").Default("false").Bool()
 
 	_, err := app.Parse(args)
@@ -37,6 +41,8 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	}
 
 	storageDir, err := ioutil.TempDir("", "")
+	err = log.SetGlobalLevelFromString(*logLevel)
+	chk.NoError(err)
 
 	repm.Init(storageDir, "", nil)
 
