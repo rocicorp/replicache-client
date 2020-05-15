@@ -4,7 +4,7 @@ echo "Building repm..."
 set -x
 ORIG=`pwd`
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-REPL_VERSION=`git describe --tags`
+REPM_VERSION=`git rev-parse HEAD`
 
 cd $ROOT
 rm -rf vendor
@@ -23,8 +23,8 @@ cd roci.dev/replicache-client
 rm -rf build
 mkdir build
 cd build
-gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPL_VERSION" --target=ios ../repm/
-gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPL_VERSION" --target=android ../repm/
+gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPM_VERSION" --target=ios ../repm/
+gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPM_VERSION" --target=android ../repm/
 
 export GO111MODULE=
 
