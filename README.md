@@ -31,3 +31,7 @@ go push <vnewsemver> origin
 # Github automatically shows the new tag at https://github.com/rocicorp/replicache-client/releases
 # Edit that release, add a description, and upload the objects
 ```
+
+# Contributing
+
+See the [contributing guide in the main Replicache repo](https://github.com/rocicorp/replicache/blob/master/contributing.md).
