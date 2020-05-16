@@ -23,9 +23,22 @@ type SyncInfo struct {
 	ClientViewInfo servetypes.ClientViewInfo `json:"clientViewInfo"`
 }
 
-// BeginSync pushes pending mutations to the data layer and pulls new state via the client view.
-func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAuth string, dataLayerAuth string, l zl.Logger) (hash.Hash, SyncInfo, error) {
-	syncInfo := SyncInfo{}
+// BeginSync initiates the sync process, temporarily forking the cache
+// onto a new branch called the "sync head", pushing pending mutations
+// to the data layer, and pulling any new state from the data layer via
+// diff-server.
+//
+// If a non-zero syncHead is returned, then caller should call
+// MaybeEndSync (potentially multiple times in a loop) to finalize
+// the sync. See MaybeEndSync for details.
+//
+// Informational details about the push and pull requests are returned
+// via SyncInfo.
+//
+// Returns an error (and zeros for other return values) in the case of
+// invalid argument values, or internal errors.
+func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAuth string, dataLayerAuth string, l zl.Logger) (syncHead hash.Hash, syncInfo SyncInfo, err error) {
+	syncInfo = SyncInfo{}
 	head := db.Head()
 
 	// Push
@@ -53,17 +66,22 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAut
 	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, diffServerAuth, dataLayerAuth, db.clientID)
 	if err != nil {
 		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: pull from %s failed: %w", diffServerURL, err)
-	} else {
-		syncInfo.ClientViewInfo = clientViewInfo
 	}
+	syncInfo.ClientViewInfo = clientViewInfo
 	if newSnapshot.Meta.Snapshot.ServerStateID == headSnapshot.Meta.Snapshot.ServerStateID {
-		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: no new data (client and server both have %s)", headSnapshot.Meta.Snapshot.ServerStateID)
+		return hash.Hash{}, syncInfo, nil
 	}
 	syncHeadRef := db.noms.WriteValue(newSnapshot.NomsStruct)
 
 	return syncHeadRef.TargetHash(), syncInfo, nil
 }
 
+// MaybeEndSync attempts to finalize a sync initiated by BeginSync() by
+// switching master to point to the syncHead. However, if there are
+// pending commits that have not yet been included in latest snapshot,
+// then finalization is not yet possible. In that case, those commits
+// that must be replayed are returned. Caller must replay them, then
+// call MaybeEndSync again.
 func (db *DB) MaybeEndSync(syncHead hash.Hash) ([]ReplayMutation, error) {
 	syncHeadCommit, err := ReadCommit(db.Noms(), syncHead)
 	if err != nil {
@@ -89,9 +107,12 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) ([]ReplayMutation, error) {
 	// BeginSync() added a new snapshot commit whose basis is the forkpoint.
 	// E.g., in below diagram, BeginSync added SS2, the sync snapshot, and SS1
 	// is the master snapshot basis and the forkpoint.
-	// SS1 - L3 <- Master
-	//   \ - SS2 - L1 - L2 <- SyncHead
+	// SS1 - L1 <- Master
+	//   \ - SS2 <- SyncHead
 	// However, the situation on master could have changed while this sync was running.
+	// Another sync might have landed a different sync snapshot, SS3:
+	// SS1 - SS3 - L1 <- Master
+	//   \ - SS2 <- SyncHead
 	// We need to check if the master snapshot basis is the same as SS1. If not,
 	// some other sync landed a new snapshot on master and we have to abort. We do
 	// not expect this in normal operation, we're being defensive.
