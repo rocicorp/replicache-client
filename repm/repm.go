@@ -279,15 +279,10 @@ func setLogLevel(data []byte) error {
 		return err
 	}
 
-	switch ls {
-	case "debug":
-		zl.SetGlobalLevel(zl.DebugLevel)
-	case "info":
-		zl.SetGlobalLevel(zl.InfoLevel)
-	case "error":
-		zl.SetGlobalLevel(zl.ErrorLevel)
-	default:
-		return fmt.Errorf("Invalid level: %s", ls)
+	err = log.SetGlobalLevelFromString(ls)
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
