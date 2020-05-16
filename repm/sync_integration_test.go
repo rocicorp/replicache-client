@@ -349,7 +349,7 @@ func TestNopRoundTrip(t *testing.T) {
 
 	// We do not expect a new snapshot on subsequent syncs.
 	_, err = api.beginSync(env.batchPushURL, dataLayerAuth, env.diffServerURL, env.diffServerAuth)
-	assert.Error(err)
+	assert.NoError(err)
 	getRootResponse = api.getRoot()
 	thirdHead := getRootResponse.Root.Hash
 	assert.Equal(secondHead, thirdHead)
@@ -443,5 +443,5 @@ func TestReplay(t *testing.T) {
 
 	// Now there is nothing left to do.
 	beginSyncResponse, err = api.beginSync(env.batchPushURL, dataLayerAuth, env.diffServerURL, env.diffServerAuth)
-	assert.Error(err) // TODO aboodman adjust this with new sync behavior
+	assert.NoError(err)
 }

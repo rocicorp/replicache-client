@@ -78,7 +78,7 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 		},
 		{
-			"no push, good pull with same server state id -> error",
+			"no push, good pull with same server state id -> no syncHead",
 			0,
 			[]uint64{},
 			BatchPushInfo{},
@@ -88,7 +88,7 @@ func TestDB_BeginSync(t *testing.T) {
 			hash.Hash{},
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
 			nil,
-			"sync failed: no new data",
+			"",
 		},
 		{
 			"push errors, good pull",
@@ -178,10 +178,13 @@ func TestDB_BeginSync(t *testing.T) {
 			if tt.wantErr != "" {
 				assert.Error(gotErr)
 				assert.Regexp(tt.wantErr, gotErr.Error())
-				assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 			} else {
 				assert.NoError(gotErr)
+			}
+			if !tt.wantSyncHead.IsEmpty() {
 				assert.NotNil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
+			} else {
+				assert.Nil(db.noms.ReadValue(syncSnapshot.NomsStruct.Hash()))
 			}
 		})
 	}
