@@ -28,7 +28,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 
 	port := app.Flag("port", "The port to run on").Default("7002").Int()
 	logLevel := app.Flag("log-level", "Log verbosity level").Default("info").Enum("error", "info", "debug")
-	useFakeTime := app.Flag("fake-time", "Use a fake time for more stable commits hashes").Default("false").Bool()
+	useFakeTime := app.Flag("fake-time", "Use a fake time for more stable commit hashes").Default("true").Bool()
 
 	_, err := app.Parse(args)
 	if err != nil {
