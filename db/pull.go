@@ -45,7 +45,9 @@ func (d *defaultPuller) client() *http.Client {
 	return d.c
 }
 
-// Pull pulls new server state from the client view via the diffserver.
+// Pull pulls new server state from the client view via the diffserver. Pull returns an error
+// if it did not successfully pull new data for *any* reason, including getting a non-200 status
+// code or the client already having the most up-to-date data the server has.
 func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
 	baseMap := baseState.Data(noms)
 	pullReq, err := json.Marshal(servetypes.PullRequest{
