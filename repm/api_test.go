@@ -84,6 +84,10 @@ func TestBasics(t *testing.T) {
 		{"put", `{"transactionId": 8, "key": "foom", "value": "fomo"}`, `{}`, ""},
 		{"commitTransaction", `{"transactionId":8}`, `{"ref":"cafum2tsootnip1me4ltfqme0q25ekk8"}`, ""},
 
+		// Commit without writes
+		{"openTransaction", `{"name": "foo", "args": []}`, `{"transactionId":9}`, ""},
+		{"commitTransaction", `{"transactionId":9}`, `{"ref":"3enaqu4u7lfn58th9b3dnfp90sf9nrc2"}`, ""},
+
 		// TODO: other scan operators
 	}
 

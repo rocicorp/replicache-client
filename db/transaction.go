@@ -169,7 +169,7 @@ func (tx *Transaction) Commit(l zl.Logger) (ref types.Ref, err error) {
 	tx.closed = true
 
 	if !tx.wrote {
-		// No need to do anything.
+		ref = tx.basis.Ref()
 		return
 	}
 
