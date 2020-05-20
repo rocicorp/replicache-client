@@ -155,9 +155,10 @@ func (tx *Transaction) Close() error {
 	return nil
 }
 
-// Commit tries to commits the changes made to the database in this transaction.
-// If this returns without an error the commit succeeded and the new ref of the
-// database head is returned.
+// Commit tries to commit the changes made to the database in this transaction.
+// If this returns without an error the commit succeeded and the (possibly) new
+// ref of the database head is returned. If there were no writes in the
+// transaction the returned ref is the unchanged ref used as the basis.
 func (tx *Transaction) Commit(l zl.Logger) (types.Ref, error) {
 	defer tx.lock()()
 
