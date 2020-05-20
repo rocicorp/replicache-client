@@ -290,7 +290,11 @@ func (conn *connection) dispatchCommitTransaction(reqBytes []byte, l zl.Logger) 
 
 	res := commitTransactionResponse{}
 
-	if err != nil {
+	if err == nil {
+		res.Ref = &jsnoms.Hash{
+			Hash: commitRef.TargetHash(),
+		}
+	} else {
 		var commitErr db.CommitError
 		if !errors.As(err, &commitErr) {
 			return nil, err
@@ -298,11 +302,6 @@ func (conn *connection) dispatchCommitTransaction(reqBytes []byte, l zl.Logger) 
 		res.RetryCommit = true
 	}
 
-	if !commitRef.IsZeroValue() {
-		res.Ref = &jsnoms.Hash{
-			Hash: commitRef.TargetHash(),
-		}
-	}
 	return mustMarshal(res), nil
 }
 

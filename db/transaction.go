@@ -155,22 +155,21 @@ func (tx *Transaction) Close() error {
 	return nil
 }
 
-// Commit tries to commits the changes made to the database in this transaction.
-// If this returns without an error the commit succeeded and the new ref of the
-// database head is returned.
-func (tx *Transaction) Commit(l zl.Logger) (ref types.Ref, err error) {
+// Commit tries to commit the changes made to the database in this transaction.
+// If this returns without an error the commit succeeded and the (possibly) new
+// ref of the database head is returned. If there were no writes in the
+// transaction the returned ref is the unchanged ref used as the basis.
+func (tx *Transaction) Commit(l zl.Logger) (types.Ref, error) {
 	defer tx.lock()()
 
 	if tx.closed {
-		err = ErrClosed
-		return
+		return types.Ref{}, ErrClosed
 	}
 
 	tx.closed = true
 
 	if !tx.wrote {
-		// No need to do anything.
-		return
+		return tx.basis.Ref(), nil
 	}
 
 	// Commmit.
@@ -185,27 +184,25 @@ func (tx *Transaction) Commit(l zl.Logger) (ref types.Ref, err error) {
 		// Ideally we'd do this check earlier but we don't want to have a constructor
 		// that can fail. We have this check at the api level so this here is just extra
 		// protection.
-		err = ValidateReplayParams(*tx.original, tx.name, tx.args, tx.basis.NextMutationID())
+		err := ValidateReplayParams(*tx.original, tx.name, tx.args, tx.basis.NextMutationID())
 		if err != nil {
-			return
+			return types.Ref{}, err
 		}
 		commit = makeReplayedLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum, (*tx.original).Ref())
-		ref = tx.db.noms.WriteValue(commit.NomsStruct)
-		return
+		return tx.db.noms.WriteValue(commit.NomsStruct), nil
 	}
 
 	commit = makeLocal(tx.db.noms, basis, time.DateTime(), tx.basis.NextMutationID(), tx.name, tx.args, newData, newDataChecksum)
-	ref = tx.db.noms.WriteValue(commit.NomsStruct)
-	err = tx.db.setHead(commit)
+	ref := tx.db.noms.WriteValue(commit.NomsStruct)
+	err := tx.db.setHead(commit)
 	if err == nil {
-		return
+		return ref, nil
 	}
 	if !errors.Is(err, datas.ErrMergeNeeded) && !errors.Is(err, datas.ErrOptimisticLockFailed) {
 		l.Err(err).Msg("Unexpected error from FastForward")
 	}
 	err = NewCommitError(err)
-	ref = types.Ref{}
-	return
+	return types.Ref{}, err
 }
 
 func ValidateReplayParams(original Commit, name string, args types.Value, mutationID uint64) error {
