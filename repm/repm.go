@@ -47,9 +47,9 @@ type Logger interface {
 // is created. Logger receives logging output from Replicache.
 func Init(storageDir, tempDir string, logger Logger) {
 	if logger == nil {
-		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stdout})
+		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: os.Stdout, TimeFormat: "02 Jan 06 15:04:05.000 -0700"})
 	} else {
-		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger, NoColor: true})
+		zlog.Logger = zlog.Output(zl.ConsoleWriter{Out: logger, TimeFormat: "02 Jan 06 15:04:05.000 -0700", NoColor: true})
 	}
 
 	zl.SetGlobalLevel(zl.InfoLevel)
