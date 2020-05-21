@@ -11,6 +11,8 @@ import (
 )
 
 type SyncInfo struct {
+	// SyncID uniquely identifies this sync for the purposes of logging and debugging.
+	SyncID string
 	// BatchPushInfo will be set if we attempted to push, ie if there were >0 pending commits.
 	// Status code will be 0 if the request was not sent (eg, connection refused). The
 	// ErrorMessage will be filled in if an error occurred, eg with the http response body
@@ -39,6 +41,8 @@ type SyncInfo struct {
 // invalid argument values, or internal errors.
 func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAuth string, dataLayerAuth string, l zl.Logger) (syncHead hash.Hash, syncInfo SyncInfo, err error) {
 	syncInfo = SyncInfo{}
+	syncInfo.SyncID = db.newSyncID()
+	l = l.With().Str("syncID", syncInfo.SyncID).Logger()
 	head := db.Head()
 
 	// Push
@@ -52,7 +56,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAut
 			mutations = append(mutations, c.Meta.Local)
 		}
 		// TODO use obfuscated client ID
-		pushInfo := db.pusher.Push(mutations, batchPushURL, dataLayerAuth, db.clientID)
+		pushInfo := db.pusher.Push(mutations, batchPushURL, dataLayerAuth, db.clientID, syncInfo.SyncID)
 		syncInfo.BatchPushInfo = &pushInfo
 		l.Debug().Msgf("Batch push finished with status %d error message '%s'", syncInfo.BatchPushInfo.HTTPStatusCode, syncInfo.BatchPushInfo.ErrorMessage)
 		// Note: we always continue whether the push succeeded or not.
@@ -61,11 +65,11 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAut
 	// Pull
 	headSnapshot, err := baseSnapshot(db.noms, head)
 	if err != nil {
-		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: could not find head snapshot: %w", err)
+		return hash.Hash{}, syncInfo, fmt.Errorf("could not find head snapshot: %w", err)
 	}
-	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, diffServerAuth, dataLayerAuth, db.clientID)
+	newSnapshot, clientViewInfo, err := db.puller.Pull(db.noms, headSnapshot, diffServerURL, diffServerAuth, dataLayerAuth, db.clientID, syncInfo.SyncID)
 	if err != nil {
-		return hash.Hash{}, syncInfo, fmt.Errorf("sync failed: pull from %s failed: %w", diffServerURL, err)
+		return hash.Hash{}, syncInfo, fmt.Errorf("pull from %s failed: %w", diffServerURL, err)
 	}
 	syncInfo.ClientViewInfo = clientViewInfo
 	if newSnapshot.Meta.Snapshot.ServerStateID == headSnapshot.Meta.Snapshot.ServerStateID {
@@ -82,7 +86,7 @@ func (db *DB) BeginSync(batchPushURL string, diffServerURL string, diffServerAut
 // then finalization is not yet possible. In that case, those commits
 // that must be replayed are returned. Caller must replay them, then
 // call MaybeEndSync again.
-func (db *DB) MaybeEndSync(syncHead hash.Hash) ([]ReplayMutation, error) {
+func (db *DB) MaybeEndSync(syncHead hash.Hash, syncID string) ([]ReplayMutation, error) {
 	syncHeadCommit, err := ReadCommit(db.Noms(), syncHead)
 	if err != nil {
 		return []ReplayMutation{}, err
@@ -117,7 +121,7 @@ func (db *DB) MaybeEndSync(syncHead hash.Hash) ([]ReplayMutation, error) {
 	// some other sync landed a new snapshot on master and we have to abort. We do
 	// not expect this in normal operation, we're being defensive.
 	if !syncSnapshotBasis.NomsStruct.Equals(headSnapshot.NomsStruct) {
-		return []ReplayMutation{}, fmt.Errorf("sync aborted: found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
+		return []ReplayMutation{}, fmt.Errorf("found a newer snapshot %s on master", headSnapshot.NomsStruct.Hash())
 	}
 
 	// Determine if there are any pending mutations that we need to replay.

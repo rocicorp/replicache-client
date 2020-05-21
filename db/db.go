@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/attic-labs/noms/go/d"
 	"github.com/attic-labs/noms/go/datas"
@@ -23,10 +25,12 @@ const (
 )
 
 type DB struct {
-	noms     datas.Database
-	clientID string
-	pusher   pusher
-	puller   puller
+	noms      datas.Database
+	clientID  string
+	pusher    pusher
+	puller    puller
+	sessionID int64
+	numSyncs  uint32
 
 	mu   sync.Mutex
 	head Commit
@@ -50,9 +54,10 @@ func Load(sp spec.Spec) (*DB, error) {
 
 func New(noms datas.Database) (*DB, error) {
 	r := DB{
-		noms:   noms,
-		pusher: &defaultPusher{},
-		puller: &defaultPuller{},
+		noms:      noms,
+		pusher:    &defaultPusher{},
+		puller:    &defaultPuller{},
+		sessionID: time.Now().Unix(),
 	}
 	// Of course nothing could have a handle on r yet, but still good practice.
 	defer r.lock()()
@@ -227,4 +232,12 @@ func (db *DB) lock() func() {
 	return func() {
 		db.mu.Unlock()
 	}
+}
+
+// newSyncID returns a (probably) unique sync identifier suitable for logging. It includes the
+// ClientID, a session identifier, and the number of syncs this session. The session
+// identifier is presently just the unix timestamp of when this DB was instantiated. The
+// the session sync number enables us to find the sync before or after a given sync.
+func (db *DB) newSyncID() string {
+	return fmt.Sprintf("%s-%x-%d", db.ClientID(), db.sessionID, atomic.AddUint32(&db.numSyncs, 1))
 }

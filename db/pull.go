@@ -29,7 +29,7 @@ func baseSnapshot(noms types.ValueReadWriter, c Commit) (Commit, error) {
 }
 
 type puller interface {
-	Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error)
+	Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string, syncID string) (Commit, servetypes.ClientViewInfo, error)
 }
 
 type defaultPuller struct {
@@ -48,7 +48,7 @@ func (d *defaultPuller) client() *http.Client {
 // Pull pulls new server state from the client view via the diffserver. Pull returns an error
 // if it did not successfully pull new data for *any* reason, including getting a non-200 status
 // code or the server having a lesser last mutation id.
-func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth string, clientViewAuth string, clientID string, syncID string) (Commit, servetypes.ClientViewInfo, error) {
 	baseMap := baseState.Data(noms)
 	pullReq, err := json.Marshal(servetypes.PullRequest{
 		ClientViewAuth: clientViewAuth,
@@ -66,6 +66,7 @@ func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url s
 		return Commit{}, servetypes.ClientViewInfo{}, err
 	}
 	req.Header.Add("Authorization", diffServerAuth)
+	req.Header.Add("X-Replicache-SyncID", syncID)
 	resp, err := d.client().Do(req)
 	if err != nil {
 		return Commit{}, servetypes.ClientViewInfo{}, err

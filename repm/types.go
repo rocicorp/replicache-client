@@ -82,6 +82,7 @@ type beginSyncResponse struct {
 }
 
 type maybeEndSyncRequest struct {
+	SyncID   string       `json:"syncID,omitempty"`
 	SyncHead *jsnoms.Hash `json:"syncHead,omitempty"`
 }
 

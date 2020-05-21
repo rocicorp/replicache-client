@@ -46,7 +46,7 @@ type BatchPushInfo struct {
 }
 
 type pusher interface {
-	Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo
+	Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string, syncID string) BatchPushInfo
 }
 
 type defaultPusher struct {
@@ -66,7 +66,7 @@ func (d *defaultPusher) client() *http.Client {
 // the (maybe non-200) status code will be returned in the BatchPushInfo. The BatchPushInfo.ErrorMessage
 // will contain any error message, eg the batch endpoint response body for non-200 status codes or an
 // internal error message if for example the reqeust could not be sent or the response not be parsed.
-func (d *defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo {
+func (d *defaultPusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string, syncID string) BatchPushInfo {
 	var info BatchPushInfo
 	withErrMsg := func(msg string) BatchPushInfo {
 		info.ErrorMessage = fmt.Sprintf("during request to %s: %s", url, msg)
@@ -92,6 +92,7 @@ func (d *defaultPusher) Push(pending []Local, url string, dataLayerAuth string, 
 		return withErrMsg(err.Error())
 	}
 	httpReq.Header.Add("Authorization", dataLayerAuth)
+	httpReq.Header.Add("X-Replicache-SyncID", syncID)
 	httpResp, err := d.client().Do(httpReq)
 	if err != nil {
 		return withErrMsg(err.Error())

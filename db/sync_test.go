@@ -46,10 +46,11 @@ func TestDB_BeginSync(t *testing.T) {
 		pullErr  string
 
 		// BeginSync
-		wantSyncHead hash.Hash
-		wantCVI      servetypes.ClientViewInfo
-		wantBPI      *BatchPushInfo
-		wantErr      string
+		wantSyncHead  hash.Hash
+		wantCVI       servetypes.ClientViewInfo
+		wantBPIStatus int
+		wantBPIErrMsg string
+		wantErr       string
 	}{
 		{
 			"good push, good pull",
@@ -61,7 +62,8 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			&BatchPushInfo{HTTPStatusCode: 1},
+			1,
+			"",
 			"",
 		},
 		{
@@ -74,7 +76,8 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			nil,
+			0,
+			"",
 			"",
 		},
 		{
@@ -87,7 +90,8 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			hash.Hash{},
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			nil,
+			0,
+			"",
 			"",
 		},
 		{
@@ -100,7 +104,8 @@ func TestDB_BeginSync(t *testing.T) {
 			"",
 			syncSnapshot.NomsStruct.Hash(),
 			servetypes.ClientViewInfo{HTTPStatusCode: 2},
-			&BatchPushInfo{ErrorMessage: "push error"},
+			0,
+			"push error",
 			"",
 		},
 		{
@@ -113,7 +118,8 @@ func TestDB_BeginSync(t *testing.T) {
 			"pull error",
 			hash.Hash{},
 			servetypes.ClientViewInfo{},
-			&BatchPushInfo{HTTPStatusCode: 1},
+			1,
+			"",
 			"pull error",
 		},
 	}
@@ -156,6 +162,7 @@ func TestDB_BeginSync(t *testing.T) {
 				assert.Equal(batchPushURL, fakePusher.gotURL)
 				assert.Equal(dataLayerAuth, fakePusher.gotDataLayerAuth)
 				assert.Equal(db.clientID, fakePusher.gotObfuscatedClientID)
+				assert.NotEqual("", fakePusher.gotSyncID)
 				var gotMutationIDs []uint64
 				for _, m := range fakePusher.gotPending {
 					gotMutationIDs = append(gotMutationIDs, m.MutationID)
@@ -168,16 +175,19 @@ func TestDB_BeginSync(t *testing.T) {
 			assert.Equal(diffServerURL, fakePuller.gotURL)
 			assert.Equal(diffServerAuth, fakePuller.gotDiffServerAuth)
 			assert.Equal(dataLayerAuth, fakePuller.gotClientViewAuth)
+			assert.NotEqual("", fakePuller.gotSyncID)
 
 			// BeginSync behavior as a whole.
 			assert.Equal(tt.wantSyncHead, gotSyncHead, tt.name)
 			assert.Equal(tt.wantCVI, gotSyncInfo.ClientViewInfo)
-			assert.Equal(tt.wantBPI, gotSyncInfo.BatchPushInfo)
+			assert.NotEqual("", gotSyncInfo.SyncID)
 			assert.NoError(db.Reload())
 			assert.True(commits.head().NomsStruct.Equals(db.Head().NomsStruct))
 			if tt.wantErr != "" {
 				assert.Error(gotErr)
 				assert.Regexp(tt.wantErr, gotErr.Error())
+				assert.Equal(tt.wantBPIStatus, gotSyncInfo.BatchPushInfo.HTTPStatusCode)
+				assert.Equal(tt.wantBPIErrMsg, gotSyncInfo.BatchPushInfo.ErrorMessage)
 			} else {
 				assert.NoError(gotErr)
 			}
@@ -195,15 +205,17 @@ type fakePusher struct {
 	gotURL                string
 	gotDataLayerAuth      string
 	gotObfuscatedClientID string
+	gotSyncID             string
 
 	info BatchPushInfo
 }
 
-func (f *fakePusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string) BatchPushInfo {
+func (f *fakePusher) Push(pending []Local, url string, dataLayerAuth string, obfuscatedClientID string, syncID string) BatchPushInfo {
 	f.gotPending = pending
 	f.gotURL = url
 	f.gotDataLayerAuth = dataLayerAuth
 	f.gotObfuscatedClientID = obfuscatedClientID
+	f.gotSyncID = syncID
 	return f.info
 }
 
@@ -213,18 +225,20 @@ type fakePuller struct {
 	gotDiffServerAuth string
 	gotClientViewAuth string
 	gotClientID       string
+	gotSyncID         string
 
 	newSnapshot    Commit
 	clientViewInfo servetypes.ClientViewInfo
 	err            string
 }
 
-func (f *fakePuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth, clientViewAuth string, clientID string) (Commit, servetypes.ClientViewInfo, error) {
+func (f *fakePuller) Pull(noms types.ValueReadWriter, baseState Commit, url string, diffServerAuth, clientViewAuth string, clientID string, syncID string) (Commit, servetypes.ClientViewInfo, error) {
 	f.gotBaseState = baseState
 	f.gotURL = url
 	f.gotDiffServerAuth = diffServerAuth
 	f.gotClientViewAuth = clientViewAuth
 	f.gotClientID = clientID
+	f.gotSyncID = syncID
 
 	if f.err == "" {
 		return f.newSnapshot, f.clientViewInfo, nil
@@ -313,7 +327,7 @@ func TestDB_MaybeEndSync(t *testing.T) {
 			}
 			syncHead := syncBranch.head()
 
-			gotReplay, err := db.MaybeEndSync(syncHead.NomsStruct.Hash())
+			gotReplay, err := db.MaybeEndSync(syncHead.NomsStruct.Hash(), "syncID")
 
 			if tt.expErr != "" {
 				assert.Error(err)

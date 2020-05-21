@@ -100,6 +100,7 @@ func Test_push(t *testing.T) {
 	for _, tt := range tests {
 		dataLayerAuth := "data layer auth token"
 		obfuscatedClientID := "obfuscated client id"
+		syncID := "1-2-3"
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req BatchPushRequest
@@ -115,6 +116,7 @@ func Test_push(t *testing.T) {
 				assert.True(v.Equals(tt.input[i].Args))
 			}
 			assert.Equal(dataLayerAuth, r.Header.Get("Authorization"))
+			assert.Equal(syncID, r.Header.Get("X-Replicache-SyncID"))
 			w.WriteHeader(tt.respCode)
 			w.Write([]byte(tt.respBody))
 		}))
@@ -125,7 +127,7 @@ func Test_push(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			pusher := defaultPusher{}
-			got := pusher.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID)
+			got := pusher.Push(tt.input, server.URL, dataLayerAuth, obfuscatedClientID, syncID)
 			assert.Equal(tt.expStatusCode, got.HTTPStatusCode)
 			assert.Equal(tt.expMutationInfos, got.BatchPushResponse.MutationInfos)
 			assert.Regexp(tt.expErrorMessage, got.ErrorMessage)

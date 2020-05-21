@@ -302,6 +302,7 @@ func TestPull(t *testing.T) {
 		assert.NoError(err, t.label)
 
 		clientViewAuth := "t123"
+		syncID := "1-2-3"
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqBody servetypes.PullRequest
@@ -309,6 +310,7 @@ func TestPull(t *testing.T) {
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
 			assert.Equal("diffServerAuth", r.Header.Get("Authorization"))
+			assert.Equal(syncID, r.Header.Get("X-Replicache-SyncID"))
 			assert.NotEqual("", reqBody.ClientID)
 			assert.Equal(clientViewAuth, reqBody.ClientViewAuth)
 			w.WriteHeader(t.respCode)
@@ -320,7 +322,7 @@ func TestPull(t *testing.T) {
 		}
 
 		puller := &defaultPuller{}
-		gotSnapshot, cvi, err := puller.Pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), "diffServerAuth", clientViewAuth, db.clientID)
+		gotSnapshot, cvi, err := puller.Pull(db.noms, g, fmt.Sprintf("%s/pull", server.URL), "diffServerAuth", clientViewAuth, db.clientID, syncID)
 		if t.expectedError == "" {
 			assert.NoError(err, t.label)
 			assert.NotEqual(Commit{}, gotSnapshot)

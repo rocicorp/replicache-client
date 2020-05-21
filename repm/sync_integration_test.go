@@ -286,7 +286,7 @@ func (a api) beginSync(batchPushURL, dataLayerAuth, diffServerURL, diffServerAut
 }
 
 func (a api) maybeEndSync(syncHead *jsnoms.Hash) maybeEndSyncResponse {
-	req := maybeEndSyncRequest{syncHead}
+	req := maybeEndSyncRequest{SyncHead: syncHead}
 	b, err := Dispatch(a.dbName, "maybeEndSync", a.marshal(req))
 	a.assert.NoError(err)
 	a.assert.NotNil(b)

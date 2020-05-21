@@ -168,7 +168,7 @@ func (conn *connection) dispatchBeginSync(reqBytes []byte, l zl.Logger) ([]byte,
 	}
 	syncHead, syncInfo, err := conn.db.BeginSync(req.BatchPushURL, req.DiffServerURL, req.DiffServerAuth, req.DataLayerAuth, l)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sync %s failed: %w", syncInfo.SyncID, err)
 	}
 	res := beginSyncResponse{
 		SyncHead: jsnoms.Hash{Hash: syncHead},
@@ -183,9 +183,9 @@ func (conn *connection) dispatchMaybeEndSync(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	replay, err := conn.db.MaybeEndSync(req.SyncHead.Hash)
+	replay, err := conn.db.MaybeEndSync(req.SyncHead.Hash, req.SyncID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sync %s failed: %w", req.SyncID, err)
 	}
 	res := maybeEndSyncResponse{
 		ReplayMutations: replay,
