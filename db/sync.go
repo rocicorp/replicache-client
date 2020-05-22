@@ -12,7 +12,7 @@ import (
 
 type SyncInfo struct {
 	// SyncID uniquely identifies this sync for the purposes of logging and debugging.
-	SyncID string
+	SyncID string `json:"syncID"`
 	// BatchPushInfo will be set if we attempted to push, ie if there were >0 pending commits.
 	// Status code will be 0 if the request was not sent (eg, connection refused). The
 	// ErrorMessage will be filled in if an error occurred, eg with the http response body
