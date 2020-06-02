@@ -77,8 +77,8 @@ type beginSyncRequest struct {
 }
 
 type beginSyncResponse struct {
-	SyncHead jsnoms.Hash `json:"syncHead,omitempty"`
-	SyncInfo db.SyncInfo `json:"syncInfo,omitempty"`
+	SyncHead jsnoms.Hash `json:"syncHead"`
+	SyncInfo db.SyncInfo `json:"syncInfo"`
 }
 
 type maybeEndSyncRequest struct {
