@@ -68,6 +68,8 @@ func (s testServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	// Use query params instead of body for the rpc and dbname to simplify the
 	// Dart SDK tests. It might make more sense to put these params in a JSON
 	// body in the future.
