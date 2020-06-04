@@ -42,14 +42,11 @@ type scanRequest struct {
 	db.ScanOptions
 }
 
+type scanResponse []db.ScanItem
+
 type scanItem struct {
 	Key   string       `json:"key"`
 	Value jsnoms.Value `json:"value"`
-}
-
-type scanResponse struct {
-	Values []scanItem `json:"values"`
-	Done   bool       `json:"done"`
 }
 
 type putRequest struct {

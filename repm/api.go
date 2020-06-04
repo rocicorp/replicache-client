@@ -112,7 +112,8 @@ func (conn *connection) dispatchScan(reqBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, err := tx.Scan(db.ScanOptions(req.ScanOptions))
+	var items scanResponse
+	items, err = tx.Scan(db.ScanOptions(req.ScanOptions))
 	if err != nil {
 		return nil, err
 	}
