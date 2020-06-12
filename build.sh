@@ -28,4 +28,7 @@ gomobile bind -ldflags="-s -w -X github.com/diff-server/util/version.v=$REPM_VER
 
 export GO111MODULE=
 
+GOARCH=amd64 GOOS=darwin go build -o test-server-amd64-osx ../cmd/test_server
+GOARCH=amd64 GOOS=linux go build -o test-server-amd64-linux ../cmd/test_server
+
 cd $ORIG
