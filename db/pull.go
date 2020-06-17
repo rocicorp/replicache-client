@@ -65,6 +65,7 @@ func (d *defaultPuller) Pull(noms types.ValueReadWriter, baseState Commit, url s
 	if err != nil {
 		return Commit{}, servetypes.ClientViewInfo{}, err
 	}
+	req.Header.Add("Content-type", "application/json")
 	req.Header.Add("Authorization", diffServerAuth)
 	req.Header.Add("X-Replicache-SyncID", syncID)
 	resp, err := d.client().Do(req)
