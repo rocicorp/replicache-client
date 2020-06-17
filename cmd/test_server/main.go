@@ -41,10 +41,12 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	}
 
 	storageDir, err := ioutil.TempDir("", "")
-	err = log.SetGlobalLevelFromString(*logLevel)
-	chk.NoError(err)
 
 	repm.Init(storageDir, "", nil)
+
+	// Must set LogLevel after init, because init defaults it to INFO.
+	err = log.SetGlobalLevelFromString(*logLevel)
+	chk.NoError(err)
 
 	ps := fmt.Sprintf(":%d", *port)
 	fmt.Printf("Listening on %s...\n", ps)

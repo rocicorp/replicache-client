@@ -12,7 +12,7 @@ import (
 )
 
 type BatchPushRequest struct {
-	ClientID  string     `json:"clientId"`
+	ClientID  string     `json:"clientID"`
 	Mutations []Mutation `json:"mutations"`
 }
 
@@ -91,6 +91,7 @@ func (d *defaultPusher) Push(pending []Local, url string, dataLayerAuth string, 
 	if err != nil {
 		return withErrMsg(err.Error())
 	}
+	httpReq.Header.Add("Content-type", "application/json")
 	httpReq.Header.Add("Authorization", dataLayerAuth)
 	httpReq.Header.Add("X-Replicache-SyncID", syncID)
 	httpResp, err := d.client().Do(httpReq)

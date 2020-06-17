@@ -309,6 +309,7 @@ func TestPull(t *testing.T) {
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			assert.NoError(err, t.label)
 			assert.Equal(t.initialStateID, reqBody.BaseStateID, t.label)
+			assert.Equal("application/json", r.Header.Get("Content-type"))
 			assert.Equal("diffServerAuth", r.Header.Get("Authorization"))
 			assert.Equal(syncID, r.Header.Get("X-Replicache-SyncID"))
 			assert.NotEqual("", reqBody.ClientID)

@@ -115,6 +115,7 @@ func Test_push(t *testing.T) {
 				assert.NoError(err)
 				assert.True(v.Equals(tt.input[i].Args))
 			}
+			assert.Equal("application/json", r.Header.Get("Content-type"))
 			assert.Equal(dataLayerAuth, r.Header.Get("Authorization"))
 			assert.Equal(syncID, r.Header.Get("X-Replicache-SyncID"))
 			w.WriteHeader(tt.respCode)
