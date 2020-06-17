@@ -12,7 +12,7 @@ import (
 )
 
 type BatchPushRequest struct {
-	ClientID  string     `json:"clientId"`
+	ClientID  string     `json:"clientID"`
 	Mutations []Mutation `json:"mutations"`
 }
 
