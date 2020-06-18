@@ -29,6 +29,7 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 	port := app.Flag("port", "The port to run on").Default("7002").Int()
 	logLevel := app.Flag("log-level", "Log verbosity level").Default("info").Enum("error", "info", "debug")
 	useFakeTime := app.Flag("fake-time", "Use a fake time for more stable commit hashes").Default("true").Bool()
+	storageDir := app.Flag("storage-dir", "Directory to store the data").ExistingDir()
 
 	_, err := app.Parse(args)
 	if err != nil {
@@ -40,9 +41,13 @@ func impl(args []string, in io.Reader, out, errs io.Writer, exit func(int)) {
 		defer time.SetFake()()
 	}
 
-	storageDir, err := ioutil.TempDir("", "")
+	if *storageDir == "" {
+		storageDirName, err := ioutil.TempDir("", "")
+		chk.NoError(err)
+		storageDir = &storageDirName
+	}
 
-	repm.Init(storageDir, "", nil)
+	repm.Init(*storageDir, "", nil)
 
 	// Must set LogLevel after init, because init defaults it to INFO.
 	err = log.SetGlobalLevelFromString(*logLevel)
