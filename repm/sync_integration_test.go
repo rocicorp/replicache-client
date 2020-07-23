@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	diffserve "roci.dev/diff-server/serve"
 	servetypes "roci.dev/diff-server/serve/types"
@@ -197,7 +198,9 @@ func newTestEnv(assert *assert.Assertions) testEnv {
 	accounts := []diffserve.Account{{ID: "accountid", Name: "Integration Test", Pubkey: nil, ClientViewURL: env.clientViewURL}}
 	env.account = accounts[0]
 	diffService := diffserve.NewService(diffDir, accounts, "", diffserve.ClientViewGetter{}, false)
-	diffServer := httptest.NewServer(diffService)
+	mux := mux.NewRouter()
+	diffserve.RegisterHandlers(diffService, mux)
+	diffServer := httptest.NewServer(mux)
 	env.diffServer = diffServer
 	env.diffServerURL = fmt.Sprintf("%s/pull", env.diffServer.URL)
 	env.diffServerAuth = "accountid"
